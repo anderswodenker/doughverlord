@@ -8,6 +8,7 @@
 #include <lvgl.h>
 
 #include "LGFX_WT32SC01Plus.hpp"
+#include "sd_card.hpp"
 
 static LGFX_WT32SC01Plus lcd;
 
@@ -189,6 +190,13 @@ void setup()
 
     build_ui();
     Serial.println("[lvgl] UI aufgebaut");
+
+    // SD-Karte erst nach dem Display: laeuft die Karte nicht, soll das
+    // Geraet trotzdem etwas anzeigen und der Heartbeat weiterlaufen.
+    if (sdcard::begin()) {
+        sdcard::ensure_example_recipe();
+        sdcard::list("/");
+    }
 }
 
 void loop()
@@ -202,12 +210,13 @@ void loop()
         last_beat = millis();
         uint16_t tx, ty;
         const bool touched = lcd.getTouch(&tx, &ty);
-        Serial.printf("[beat] t=%lus  heap=%lu  psram=%lu  klicks=%lu  touch=%s\n",
+        Serial.printf("[beat] t=%lus  heap=%lu  psram=%lu  klicks=%lu  touch=%s  sd=%s\n",
                       (unsigned long)(millis() / 1000),
                       (unsigned long)ESP.getFreeHeap(),
                       (unsigned long)ESP.getFreePsram(),
                       (unsigned long)click_count,
-                      touched ? "ja" : "nein");
+                      touched ? "ja" : "nein",
+                      sdcard::ready() ? "ok" : "fehlt");
     }
 
     // Rohe Touch-Koordinaten anzeigen (unabhaengig von LVGL-Widgets).

@@ -1,0 +1,20 @@
+{
+  "name": "Bauernbrot",
+  "zutaten": [
+    { "menge": "300 g", "was": "Weizenmehl 550" },
+    { "menge": "200 g", "was": "Roggenmehl 1050" },
+    { "menge": "350 g", "was": "Wasser, lauwarm" },
+    { "menge": "100 g", "was": "Anstellgut, aktiv" }
+  ],
+  "schritte": [
+    { "name": "Autolyse",          "dauer": "45min" },
+    { "name": "Salz einarbeiten",  "offen": true,
+      "hinweis": "bis der Teig sich glatt anfühlt",
+      "zutaten": [ { "menge": "12 g", "was": "Salz" } ] },
+    { "name": "Dehnen und Falten", "dauer": "30min", "runden": 4 },
+    { "name": "Stockgare",         "dauer": "3h" },
+    { "name": "Formen",            "offen": true },
+    { "name": "Stückgare",         "dauer": "12h" },
+    { "name": "Backen",            "dauer": "45min" }
+  ]
+}
