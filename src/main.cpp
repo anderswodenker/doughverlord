@@ -8,6 +8,7 @@
 #include <lvgl.h>
 
 #include "LGFX_WT32SC01Plus.hpp"
+#include "recipe.hpp"
 #include "sd_card.hpp"
 
 static LGFX_WT32SC01Plus lcd;
@@ -196,6 +197,20 @@ void setup()
     if (sdcard::begin()) {
         sdcard::ensure_example_recipe();
         sdcard::list("/");
+    }
+
+#ifdef RECIPE_SELFTEST
+    recipe::selftest();
+#endif
+
+    // Bis die Rezeptauswahl steht: alle Rezepte einmal einlesen und loggen,
+    // damit der Parser am echten Geraet gegen die Handrechnung gehalten wird.
+    for (const String &name : recipe::list_files()) {
+        recipe::Recipe r;
+        String err;
+        const String path = String("/rezepte/") + name;
+        if (recipe::load(path.c_str(), r, err)) recipe::log(r);
+        else Serial.printf("[rezept] %s: %s\n", path.c_str(), err.c_str());
     }
 }
 
