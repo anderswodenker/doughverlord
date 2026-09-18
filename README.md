@@ -1,6 +1,10 @@
-# WT32-SC01 Plus — LVGL-Grundgerüst
+# Sauerteig-Timer auf dem WT32-SC01 Plus
 
-Display + Touch + LVGL 9 auf dem WT32-SC01 Plus (ESP32-S3-WROVER).
+Ein Timer, der nach dem Zusammenmischen durch die Schrittkette eines
+Sauerteigrezepts führt. Rezepte als JSON auf der SD-Karte, Zustand im NVS
+(überlebt Reset und Stromausfall), Uhr per NTP. Läuft auf dem WT32-SC01 Plus
+(ESP32-S3, 3.5"-Touch, LVGL 9 über LovyanGFX). Konzept: [`PLAN.md`](PLAN.md),
+Details für Agenten: [`CLAUDE.md`](CLAUDE.md).
 
 ## Hardware
 
@@ -50,16 +54,18 @@ ob das Board lebt.
 Die Nummer **muss unter 73** liegen: `73-seat-late.rules` wertet den `uaccess`-Tag
 aus, eine höher nummerierte Regel setzt ihn zu spät.
 
-## Was das Grundgerüst zeigt
+## Einrichten
 
-- Farbtest R/G/B/Weiß — prüft Farbreihenfolge und `invert`-Einstellung
-- Button mit Klickzähler — prüft LVGL-Eventpfad
-- rohe Touch-Koordinaten — prüft Touch-Achsen gegen die Rotation
-- Helligkeitsregler — prüft die PWM-Hintergrundbeleuchtung
-- Chip-/Flash-/PSRAM-Infos auf der seriellen Konsole
+1. `include/secrets.example.hpp` nach `include/secrets.hpp` kopieren, WLAN eintragen.
+2. MicroSD als FAT32 formatieren und einstecken. Beim ersten Start legt die
+   Firmware `/config.json` (WLAN, `zeitraffer`, `ntfy_topic`) und
+   `/rezepte/bauernbrot.json` als Vorlage an.
+3. `pio run -t upload`.
+
+Rezepte: eine Datei je Brot in `/rezepte/`, Format siehe `PLAN.md` bzw.
+`sd/rezepte/bauernbrot.json`. Schrittarten: feste `dauer`, `dauer` + `runden`,
+oder `offen: true`.
 
 ## Dateien
 
-- `src/LGFX_WT32SC01Plus.hpp` — LovyanGFX-Boardkonfiguration (die eigentliche Fummelarbeit)
-- `src/main.cpp` — LVGL-Anbindung (Flush, Touch, Tick) und Demo-UI
-- `include/lv_conf.h` — LVGL-Konfiguration
+Übersicht in `CLAUDE.md`, Abschnitt „Aufbau".

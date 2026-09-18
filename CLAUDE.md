@@ -1,8 +1,20 @@
 # WT32-SC01 Plus — Kontext für Agenten
 
-Embedded-Projekt auf einem WT32-SC01 Plus (ESP32-S3 mit 3.5"-Touchdisplay).
-Stand: **Grundgerüst läuft verifiziert auf der Hardware** — Display, Touch,
-LVGL, serielle Ausgabe sind alle am echten Gerät geprüft, nicht nur kompiliert.
+Embedded-Projekt auf einem WT32-SC01 Plus (ESP32-S3 mit 3.5"-Touchdisplay):
+ein **Sauerteig-Timer**, der nach dem Zusammenmischen durch die Schrittkette
+eines Rezepts führt. Plan und Begründungen in [`PLAN.md`](PLAN.md).
+
+## Stand (2026-09-19)
+
+Schritte 1–5 aus `PLAN.md` sind **fertig und am Gerät verifiziert**: SD-Karte,
+Rezept-Parser, Sitzungslogik mit NVS-Persistenz, WLAN/NTP/`config.json`,
+Screens 1–3 (Auswahl, Zutaten, laufender Timer). Die Demo-UI ist weg.
+
+**Offen:** Schritt 6 (Vollbild-Alarm, Push, Dimmen nach 60 s), Schritt 7
+(Schrittliste als Overlay, Status-Screen, Teig-Abbruch über die UI — bisher nur
+per CLI `x`), Schritt 8 (Doku). Für den Push fehlt die Entscheidung
+**ntfy oder MQTT** und das Topic — beim User erfragen. Dimmen bleibt drin, auch
+wenn es ein IPS ist: das Gerät steht nachts in der Küche.
 
 ## Hardware (am 2026-09-18 per esptool ausgelesen, nicht geraten)
 
@@ -58,32 +70,79 @@ einem eigenen Python 3.12 aus dem uv-Tool-Env.
 - Der Cast im Flush-Callback auf `lgfx::rgb565_t*` ist korrekt, weil dieser Typ
   bitidentisch zu LVGL's `RGB565` ist (`b:5, g:6, r:5`). Kein Byte-Swap nötig.
 
+- Die eingebauten `lv_font_montserrat_*` können **keine Umlaute** (nur ASCII
+  + `°` + Symbole). Deshalb eigene Fonts in `src/fonts/` (`font_ms_16..48`
+  mit Latin-1, `font_ms_96` nur Ziffern für die Restzeit), erzeugt von
+  `tools/gen_fonts.sh` per `npx lv_font_conv` aus dem Montserrat, das LVGL
+  mitbringt. Eingebaut bleibt nur `montserrat_16` wegen `LV_SYMBOL_*`.
+- `lv_snapshot` rendert nur den Screen, nicht die System-Layer — ein
+  Performance-Monitor wäre im Screenshot unsichtbar (ist deshalb abgeschaltet).
+
 ## Aufbau
 
-- `src/LGFX_WT32SC01Plus.hpp` — LovyanGFX-Boardkonfiguration (die Fummelarbeit, erledigt)
-- `src/main.cpp` — LVGL-Anbindung (Flush, Touch, Tick) und Demo-UI
-- `include/lv_conf.h` — LVGL-Konfiguration
-- `platformio.ini` — Board-Overrides; `esp32-s3-devkitc-1` als Basis, da PlatformIO
-  das WT32-SC01 Plus nicht kennt
+| Datei | Aufgabe |
+|---|---|
+| `src/LGFX_WT32SC01Plus.hpp` | LovyanGFX-Boardkonfig — **unverändert lassen** |
+| `src/display.{hpp,cpp}` | LVGL-Anbindung (Flush, Touch, Tick), Helligkeit, `idle_ms()` |
+| `src/sd_card.{hpp,cpp}` | SD an SPI (CLK 39, MISO 38, MOSI 40, CS 41), Listing, Beispielrezept anlegen |
+| `src/recipe.{hpp,cpp}` | JSON → `Recipe`/`Step`/`Ingredient`, `parse_duration("1h30min")`, `format_duration()` |
+| `src/session.{hpp,cpp}` | Zustandsautomat (läuft/wartet/fertig), Runden, NVS, Restzeit, ETA, Zeitraffer, Ereignisse |
+| `src/config.{hpp,cpp}` | `/config.json` von SD: WLAN, `zeitraffer`, `ntfy_topic`; legt sie aus `secrets.hpp` an |
+| `src/net.{hpp,cpp}` | WLAN mit Auto-Reconnect, SNTP (Zeitzone Berlin), Statuszeile |
+| `src/ui/` | `ui.cpp` (Navigation, 1-Hz-Refresh), `common.cpp` (Farben, Header, Buttons), `screen_*.cpp` |
+| `src/cli.{hpp,cpp}` | serielle Kommandos, siehe unten |
+| `src/screenshot.{hpp,cpp}` | Screen als Base64 über USB |
+| `include/secrets.hpp` | WLAN-Zugang, **gitignored**; Vorlage `secrets.example.hpp` |
+| `sd/rezepte/bauernbrot.json` | Beispielrezept; per `embed_txtfiles` in der Firmware, wird auf leere Karten geschrieben |
+| `tools/` | `gen_fonts.sh`, `screenshot.py` |
 
-## Nächster Schritt: Sauerteig-Timer
+`main.cpp` verdrahtet nur noch. Reihenfolge in `setup()`: Display → SD →
+Config → Net (setzt TZ) → Session → UI.
 
-**Der Plan steht in [`PLAN.md`](PLAN.md) — dort anfangen.** Er ist mit dem User
-abgestimmt und enthält Datenmodell, JSON-Format der Rezepte, Oberfläche,
-Dateiaufteilung, Umsetzungsreihenfolge und Verifikation.
+### Verhalten, das nicht offensichtlich ist
 
-Kurzfassung: ein Timer für Sauerteigbrot, der nach dem Zusammenmischen durch die
-je nach Brotsorte unterschiedliche Kette von Schritten führt. Rezepte liegen als
-JSON auf der SD-Karte, jeder Schritt wartet auf Bestätigung am Gerät, Alarm als
-Vollbild plus Push aufs Handy, WLAN mit NTP.
+- Sitzungszustand liegt im NVS (`Preferences`, Namespace `teig`) und wird nur
+  bei Zustandswechseln geschrieben. Startzeit ist Unix-Zeit; ohne gültige Uhr
+  (vor 2024) wird `startzeit = 0` gespeichert, Restzeit läuft dann über
+  `millis()` und die Startzeit wird nachgetragen, sobald NTP antwortet.
+- Die RTC hält die Uhr über einen Reset (auch `pio run -t upload`), nur ein
+  Stromausfall verliert sie.
+- `Waiting` heißt Alarm, wenn `current_step()->offen == false` (Timer abgelaufen),
+  sonst ein offener Schritt. Kein eigener Zustand dafür.
+- `zeitraffer` aus `config.json` teilt alle Dauern; im Timer-Screen rot markiert.
+- `config.json` fehlt → wird aus `secrets.hpp` angelegt. Danach gilt die Karte.
 
-Die Demo-UI in `main.cpp` (Farbbalken, Button, Touch-Anzeige, Helligkeitsregler)
-ist reines Diagnosewerkzeug und wird dabei ersetzt.
+## Am Gerät arbeiten, ohne hinzuschauen
 
-**Noch offen:** der Backprozess selbst — welche Brotsorten, welche Schritte,
-welche Dauern. Das ist das Handwerk des Users und blockiert die Umsetzung nicht,
-weil Rezepte Daten sind und keine Firmware. Beim Erstellen der echten Rezepte
-nachfragen statt erfinden.
+Serielles CLI (Zeile + `\n` über `/dev/ttyACM0`, DTR muss gesetzt sein):
+
+```
+s <datei>   Rezept starten, z. B. s bauernbrot.json
+c           Erledigt          x  Teig verwerfen        p  Status
+l           Rezepte listen    f <n>  Zeitraffer (nur RAM, bis Reset)
+t <unix>    Uhr stellen       w <ssid> <pass>  WLAN in config.json, Neustart
+n           Netzstatus        u s|z|t  Screen anspringen (Auswahl/Zutaten/Timer)
+shot        Screenshot als Base64
+```
+
+`tools/screenshot.py out.png` holt den Screenshot (≈1,2 s). Python dafür:
+`~/.local/share/uv/tools/platformio/bin/python` (hat pyserial und Pillow).
+Rezept-Parser-Selbsttest: `PLATFORMIO_BUILD_FLAGS="-DRECIPE_SELFTEST" pio run -t upload`.
+
+Zum Verifizieren nach Änderungen hat sich bewährt: Skript, das per pyserial
+Kommandos schickt, Board per RTS resettet und `[teig]`-Zeilen mitliest —
+so wurden Resets mitten im Schritt und der ganze Ablauf im Zeitraffer geprüft.
+
+## Weiter mit Schritt 6
+
+Plan in `PLAN.md`, Abschnitt „Umsetzung". Anknüpfpunkte im Code:
+`session::take_event()` liefert `Expired`/`Finished` (in `loop()` bisher nur
+geloggt), `display::idle_ms()` und `display::set_brightness()` sind für das
+Dimmen da, `config::get().ntfy_topic` ist vorbereitet, `net::notify()` fehlt.
+
+**Noch offen bleibt der Backprozess selbst** — welche Brotsorten, Schritte,
+Dauern. Das ist das Handwerk des Users. Beim Erstellen der echten Rezepte
+nachfragen statt erfinden; `bauernbrot.json` ist nur eine Vorlage.
 
 **Später, optional:** Hausstrom über MQTT, interessant erst für den Moment, in
 dem das Brot in den Ofen kommt. Anbindung an die vorhandene `omarchy-strom`-Bridge
