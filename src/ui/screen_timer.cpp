@@ -15,7 +15,10 @@ lv_obj_t *lbl_clock      = nullptr;
 lv_obj_t *wifi       = nullptr;
 lv_obj_t *raffer     = nullptr;
 lv_obj_t *step_name  = nullptr;
-lv_obj_t *big        = nullptr;   // Restzeit in Ziffern (96)
+lv_obj_t *big        = nullptr;   // Restzeit: Zeile aus Einzelzeichen
+lv_obj_t *big_cell[5] = {};       // je ein Label pro Zeichen, feste Zellbreite
+int32_t   digit_w    = 0;         // breiteste Ziffer der 96er
+int32_t   colon_w    = 0;
 lv_obj_t *big_unit   = nullptr;   // "Stunden : Minuten" o. ae.
 lv_obj_t *lbl_word       = nullptr;   // Text statt Ziffern (48): "Erledigt?", "Brot fertig"
 lv_obj_t *hint       = nullptr;
@@ -71,7 +74,23 @@ void build()
     // Zeitraffer deutlich markieren, damit niemand den Modus mit echtem Teig benutzt.
     raffer    = ui::make_label(body, "", &font_ms_20, ui::COL_ALARM);
     step_name = ui::make_label(body, "", &font_ms_28);
-    big       = ui::make_label(body, "", &font_ms_96);
+    // Montserrat hat proportionale Ziffern (die 1 ist schmal) -- damit die
+    // Stellen nicht wandern, bekommt jedes Zeichen eine Zelle fester Breite.
+    for (char c = '0'; c <= '9'; c++)
+        digit_w = LV_MAX(digit_w, (int32_t)lv_font_get_glyph_width(&font_ms_96, c, 0));
+    colon_w = lv_font_get_glyph_width(&font_ms_96, ':', 0);
+
+    big = lv_obj_create(body);
+    lv_obj_set_size(big, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_obj_set_style_bg_opa(big, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(big, 0, 0);
+    lv_obj_set_style_pad_all(big, 0, 0);
+    lv_obj_set_flex_flow(big, LV_FLEX_FLOW_ROW);
+    lv_obj_set_scrollable(big, false);
+    for (lv_obj_t *&cell : big_cell) {
+        cell = ui::make_label(big, "", &font_ms_96);
+        lv_obj_set_style_text_align(cell, LV_TEXT_ALIGN_CENTER, 0);
+    }
     big_unit  = ui::make_label(body, "", &font_ms_16, ui::COL_MUTED);
     lbl_word      = ui::make_label(body, "", &font_ms_48, ui::COL_ACCENT);
     hint      = ui::make_label(body, "", &font_ms_20, ui::COL_MUTED);
@@ -108,6 +127,22 @@ void build()
     lv_obj_set_size(next, 250, 26);
     eta = ui::make_label(foot, "", &font_ms_20);
     lv_obj_align(eta, LV_ALIGN_RIGHT_MID, 0, 0);
+}
+
+// Setzt die grosse Restzeit zeichenweise in die festen Zellen.
+void set_big(const char *text)
+{
+    for (size_t i = 0; i < 5; i++) {
+        lv_obj_t *cell = big_cell[i];
+        if (i < strlen(text)) {
+            const char t[2] = { text[i], 0 };
+            lv_label_set_text(cell, t);
+            lv_obj_set_width(cell, text[i] == ':' ? colon_w : digit_w);
+            lv_obj_set_hidden(cell, false);
+        } else {
+            lv_obj_set_hidden(cell, true);
+        }
+    }
 }
 
 String eta_text()
@@ -218,13 +253,15 @@ void refresh()
             lv_obj_set_style_text_color(lbl_word, lv_color_hex(ui::COL_MUTED), 0);
             lv_obj_set_hidden(lbl_word, false);
         } else {
+            char t[8];
             if (rest >= 3600) {
-                lv_label_set_text_fmt(big, "%ld:%02ld", (long)(rest / 3600), (long)((rest % 3600) / 60));
+                snprintf(t, sizeof t, "%ld:%02ld", (long)(rest / 3600), (long)((rest % 3600) / 60));
                 lv_label_set_text(big_unit, "Stunden : Minuten");
             } else {
-                lv_label_set_text_fmt(big, "%02ld:%02ld", (long)(rest / 60), (long)(rest % 60));
+                snprintf(t, sizeof t, "%02ld:%02ld", (long)(rest / 60), (long)(rest % 60));
                 lv_label_set_text(big_unit, "Minuten : Sekunden");
             }
+            set_big(t);
             lv_obj_set_hidden(big, false);
             lv_obj_set_hidden(big_unit, false);
             const uint32_t d = session::step_duration_s();
