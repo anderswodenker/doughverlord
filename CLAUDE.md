@@ -66,9 +66,39 @@ einem eigenen Python 3.12 aus dem uv-Tool-Env.
 - `platformio.ini` — Board-Overrides; `esp32-s3-devkitc-1` als Basis, da PlatformIO
   das WT32-SC01 Plus nicht kennt
 
-## Nächster Schritt
+## Nächster Schritt: Sauerteig-Timer
 
-Die Demo-UI in `main.cpp` (Farbbalken, Button, Touch-Anzeige, Helligkeitsregler)
-ist reines Diagnosewerkzeug und darf durch die eigentliche App ersetzt werden.
-Angedacht war ein **Hausstrom-Dashboard über MQTT**, passend zur vorhandenen
-`omarchy-strom`-Bridge des Users.
+Das ist das **eigentliche Ziel** des Geräts. Die Demo-UI in `main.cpp`
+(Farbbalken, Button, Touch-Anzeige, Helligkeitsregler) ist reines
+Diagnosewerkzeug und darf dafür ersetzt werden.
+
+**Idee:** Ein intelligenter Timer für Sauerteigbrot. Sobald die Zutaten
+zusammengemischt sind, startet eine Kette von Schritten, die je nach Brotsorte
+unterschiedlich aussieht — der Timer führt durch diese Abfolge, statt nur einen
+einzelnen Wecker zu stellen.
+
+Die Prozesse dauern viele Stunden bis über Nacht. Das prägt die Anforderungen:
+Restzeiten müssen aus der Küche über den Raum lesbar sein, das Gerät läuft
+dauerhaft (Display-Helligkeit und Einbrennen bedenken), und ein Stromausfall
+oder Reset darf einen laufenden Teig nicht verlieren — Zustand also persistent
+ablegen, nicht nur im RAM. Ein akustischer oder optischer Alarm ist nötig, weil
+niemand danebensteht.
+
+**Vor der Umsetzung mit dem User klären** (bewusst nicht erraten — das ist sein
+Handwerk, nicht unseres):
+
+- Welche Brotsorten, und welche Schritte je Sorte? (Autolyse, Dehnen und Falten
+  in Intervallen, Stockgare, Formen, Stückgare, Backen … nur eine Vermutung)
+- Sind die Schritte feste Zeiten, oder hängen sie von Temperatur oder Augenschein ab?
+- Wiederkehrende Schritte in Intervallen (Dehnen und Falten alle 30 min) — wie abbilden?
+- Rezepte fest in der Firmware, oder auf dem Gerät anlegbar?
+- Wie soll der Alarm aussehen? Das Board hat einen Lautsprecheranschluss;
+  ob bestückt, ist noch nicht geprüft.
+- Uhrzeit: WLAN mit NTP, oder reicht relative Zeitmessung ab Start?
+
+## Später, optional: Hausstrom
+
+Interessant erst für den Moment, in dem das Brot im Ofen landet — also als
+Ergänzung zum Timer, nicht als eigenes Feature. MQTT-Anbindung an die vorhandene
+`omarchy-strom`-Bridge des Users. Broker-Adresse und Topic-Struktur sind noch
+nicht erfragt.
