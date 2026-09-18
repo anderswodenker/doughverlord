@@ -59,6 +59,8 @@ void tick();
 // Holt das letzte Ereignis ab und setzt es zurueck.
 Event take_event();
 
+// Effektive Dauer einer Runde des aktuellen Schritts (Zeitraffer drin); 0 bei offen.
+uint32_t step_duration_s();
 // Restzeit des laufenden Schritts in Sekunden; 0 wenn abgelaufen,
 // -1 wenn nicht bestimmbar (kein Timer oder Uhr ungueltig).
 int32_t remaining_s();

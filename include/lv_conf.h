@@ -212,7 +212,7 @@
 #define LV_USE_VECTOR_GRAPHIC 0
 
 /** Render a widget and its children into an image buffer with lv_snapshot_take(). */
-#define LV_USE_SNAPSHOT 0
+#define LV_USE_SNAPSHOT 1
 
 /** Backend that gives the SW renderer vector graphics support. */
 #define LV_USE_THORVG 0
@@ -1010,7 +1010,7 @@
 #define LV_FONT_MONTSERRAT_12 0
 
 /** Montserrat 14 */
-#define LV_FONT_MONTSERRAT_14 1
+#define LV_FONT_MONTSERRAT_14 0
 
 /** Montserrat 16 */
 #define LV_FONT_MONTSERRAT_16 1
@@ -1019,13 +1019,13 @@
 #define LV_FONT_MONTSERRAT_18 0
 
 /** Montserrat 20 */
-#define LV_FONT_MONTSERRAT_20 1
+#define LV_FONT_MONTSERRAT_20 0
 
 /** Montserrat 22 */
 #define LV_FONT_MONTSERRAT_22 0
 
 /** Montserrat 24 */
-#define LV_FONT_MONTSERRAT_24 1
+#define LV_FONT_MONTSERRAT_24 0
 
 /** Montserrat 26 */
 #define LV_FONT_MONTSERRAT_26 0

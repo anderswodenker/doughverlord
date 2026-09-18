@@ -1,0 +1,17 @@
+// Die Screens des Sauerteig-Timers. ui::begin() baut alles auf und zeigt
+// je nach Sitzungszustand die Rezeptauswahl oder den laufenden Timer;
+// ui::tick() haelt Uhr und Restzeit aktuell.
+#pragma once
+
+#include "recipe.hpp"
+
+namespace ui {
+
+void begin();
+void tick();   // aus loop(); intern auf 1 Hz gedrosselt
+
+void show_select();
+void show_ingredients(const recipe::Recipe &r, bool startable);
+void show_timer();
+
+}  // namespace ui

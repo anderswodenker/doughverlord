@@ -6,7 +6,9 @@
 #include "config.hpp"
 #include "net.hpp"
 #include "recipe.hpp"
+#include "screenshot.hpp"
 #include "session.hpp"
+#include "ui/ui.hpp"
 
 namespace {
 
@@ -22,12 +24,15 @@ void help()
     Serial.println("[cli]   t <unix>    Uhr stellen (bis NTP da ist)");
     Serial.println("[cli]   w <ssid> <passwort>  WLAN in /config.json schreiben und neu starten");
     Serial.println("[cli]   n           Netzstatus");
+    Serial.println("[cli]   shot        Screenshot als Base64 (tools/screenshot.py)");
+    Serial.println("[cli]   u s|z|t     Screen anzeigen: Auswahl, Zutaten, Timer");
 }
 
 void handle(String line)
 {
     line.trim();
     if (!line.length()) return;
+    if (line == "shot") { screenshot::dump(); return; }
     const char cmd = line[0];
     String arg = line.substring(1);
     arg.trim();
@@ -66,6 +71,20 @@ void handle(String line)
             break;
         }
         case 'n': Serial.printf("[cli] %s\n", net::status_line().c_str()); break;
+        case 'u': {   // Screens ohne Touch anspringen (fuer Screenshots)
+            if (arg == "s") ui::show_select();
+            else if (arg == "t") ui::show_timer();
+            else if (arg == "z") {
+                const recipe::Recipe *r = session::current_recipe();
+                recipe::Recipe tmp; String err;
+                if (!r) {
+                    auto files = recipe::list_files();
+                    if (!files.empty() && recipe::load((String("/rezepte/") + files[0]).c_str(), tmp, err)) r = &tmp;
+                }
+                if (r) ui::show_ingredients(*r, !session::active());
+            }
+            break;
+        }
         default: help(); break;
     }
 }

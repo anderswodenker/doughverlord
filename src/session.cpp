@@ -247,6 +247,12 @@ Event take_event()
     return e;
 }
 
+uint32_t step_duration_s()
+{
+    const recipe::Step *s = current_step();
+    return (s && !s->offen) ? eff_dauer(*s) : 0;
+}
+
 int32_t remaining_s()
 {
     if (zustand != State::Running) return -1;
