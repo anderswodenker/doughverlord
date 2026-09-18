@@ -86,6 +86,7 @@ void build()
     lv_obj_set_style_border_width(big, 0, 0);
     lv_obj_set_style_pad_all(big, 0, 0);
     lv_obj_set_flex_flow(big, LV_FLEX_FLOW_ROW);
+    lv_obj_set_style_pad_column(big, -4, 0);   // Zellen etwas ueberlappen lassen: enger, wie eine Uhr
     lv_obj_set_scrollable(big, false);
     for (lv_obj_t *&cell : big_cell) {
         cell = ui::make_label(big, "", &font_ms_96);
