@@ -68,37 +68,23 @@ einem eigenen Python 3.12 aus dem uv-Tool-Env.
 
 ## Nächster Schritt: Sauerteig-Timer
 
-Das ist das **eigentliche Ziel** des Geräts. Die Demo-UI in `main.cpp`
-(Farbbalken, Button, Touch-Anzeige, Helligkeitsregler) ist reines
-Diagnosewerkzeug und darf dafür ersetzt werden.
+**Der Plan steht in [`PLAN.md`](PLAN.md) — dort anfangen.** Er ist mit dem User
+abgestimmt und enthält Datenmodell, JSON-Format der Rezepte, Oberfläche,
+Dateiaufteilung, Umsetzungsreihenfolge und Verifikation.
 
-**Idee:** Ein intelligenter Timer für Sauerteigbrot. Sobald die Zutaten
-zusammengemischt sind, startet eine Kette von Schritten, die je nach Brotsorte
-unterschiedlich aussieht — der Timer führt durch diese Abfolge, statt nur einen
-einzelnen Wecker zu stellen.
+Kurzfassung: ein Timer für Sauerteigbrot, der nach dem Zusammenmischen durch die
+je nach Brotsorte unterschiedliche Kette von Schritten führt. Rezepte liegen als
+JSON auf der SD-Karte, jeder Schritt wartet auf Bestätigung am Gerät, Alarm als
+Vollbild plus Push aufs Handy, WLAN mit NTP.
 
-Die Prozesse dauern viele Stunden bis über Nacht. Das prägt die Anforderungen:
-Restzeiten müssen aus der Küche über den Raum lesbar sein, das Gerät läuft
-dauerhaft (Display-Helligkeit und Einbrennen bedenken), und ein Stromausfall
-oder Reset darf einen laufenden Teig nicht verlieren — Zustand also persistent
-ablegen, nicht nur im RAM. Ein akustischer oder optischer Alarm ist nötig, weil
-niemand danebensteht.
+Die Demo-UI in `main.cpp` (Farbbalken, Button, Touch-Anzeige, Helligkeitsregler)
+ist reines Diagnosewerkzeug und wird dabei ersetzt.
 
-**Vor der Umsetzung mit dem User klären** (bewusst nicht erraten — das ist sein
-Handwerk, nicht unseres):
+**Noch offen:** der Backprozess selbst — welche Brotsorten, welche Schritte,
+welche Dauern. Das ist das Handwerk des Users und blockiert die Umsetzung nicht,
+weil Rezepte Daten sind und keine Firmware. Beim Erstellen der echten Rezepte
+nachfragen statt erfinden.
 
-- Welche Brotsorten, und welche Schritte je Sorte? (Autolyse, Dehnen und Falten
-  in Intervallen, Stockgare, Formen, Stückgare, Backen … nur eine Vermutung)
-- Sind die Schritte feste Zeiten, oder hängen sie von Temperatur oder Augenschein ab?
-- Wiederkehrende Schritte in Intervallen (Dehnen und Falten alle 30 min) — wie abbilden?
-- Rezepte fest in der Firmware, oder auf dem Gerät anlegbar?
-- Wie soll der Alarm aussehen? Das Board hat einen Lautsprecheranschluss;
-  ob bestückt, ist noch nicht geprüft.
-- Uhrzeit: WLAN mit NTP, oder reicht relative Zeitmessung ab Start?
-
-## Später, optional: Hausstrom
-
-Interessant erst für den Moment, in dem das Brot im Ofen landet — also als
-Ergänzung zum Timer, nicht als eigenes Feature. MQTT-Anbindung an die vorhandene
-`omarchy-strom`-Bridge des Users. Broker-Adresse und Topic-Struktur sind noch
-nicht erfragt.
+**Später, optional:** Hausstrom über MQTT, interessant erst für den Moment, in
+dem das Brot in den Ofen kommt. Anbindung an die vorhandene `omarchy-strom`-Bridge
+des Users; Broker-Adresse und Topics sind noch nicht erfragt.
