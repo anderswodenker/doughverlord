@@ -9,6 +9,8 @@
 
 #include "LGFX_WT32SC01Plus.hpp"
 #include "cli.hpp"
+#include "config.hpp"
+#include "net.hpp"
 #include "recipe.hpp"
 #include "sd_card.hpp"
 #include "session.hpp"
@@ -215,6 +217,10 @@ void setup()
         else Serial.printf("[rezept] %s: %s\n", path.c_str(), err.c_str());
     }
 
+    // Reihenfolge: Konfiguration -> Netz (setzt die Zeitzone) -> Sitzung.
+    const config::Config &cfg = config::load();
+    net::begin(cfg.wifi_ssid, cfg.wifi_pass);
+    session::set_time_factor(cfg.zeitraffer);
     session::begin();
     session::log_status();
 }
@@ -239,13 +245,14 @@ void loop()
         last_beat = millis();
         uint16_t tx, ty;
         const bool touched = lcd.getTouch(&tx, &ty);
-        Serial.printf("[beat] t=%lus  heap=%lu  psram=%lu  klicks=%lu  touch=%s  sd=%s\n",
+        Serial.printf("[beat] t=%lus  heap=%lu  psram=%lu  klicks=%lu  touch=%s  sd=%s  %s\n",
                       (unsigned long)(millis() / 1000),
                       (unsigned long)ESP.getFreeHeap(),
                       (unsigned long)ESP.getFreePsram(),
                       (unsigned long)click_count,
                       touched ? "ja" : "nein",
-                      sdcard::ready() ? "ok" : "fehlt");
+                      sdcard::ready() ? "ok" : "fehlt",
+                      net::status_line().c_str());
         if (session::active()) session::log_status();
     }
 

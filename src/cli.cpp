@@ -3,6 +3,8 @@
 #include <Arduino.h>
 #include <sys/time.h>
 
+#include "config.hpp"
+#include "net.hpp"
 #include "recipe.hpp"
 #include "session.hpp"
 
@@ -18,6 +20,8 @@ void help()
     Serial.println("[cli]   l           Rezepte auflisten");
     Serial.println("[cli]   f <n>       Zeitraffer-Faktor setzen");
     Serial.println("[cli]   t <unix>    Uhr stellen (bis NTP da ist)");
+    Serial.println("[cli]   w <ssid> <passwort>  WLAN in /config.json schreiben und neu starten");
+    Serial.println("[cli]   n           Netzstatus");
 }
 
 void handle(String line)
@@ -51,6 +55,17 @@ void handle(String line)
             Serial.printf("[cli] Uhr gestellt, gueltig=%s\n", session::time_valid() ? "ja" : "nein");
             break;
         }
+        case 'w': {
+            const int sp = arg.indexOf(' ');
+            if (sp < 1) { Serial.println("[cli] w <ssid> <passwort>"); break; }
+            if (config::save_wifi(arg.substring(0, sp), arg.substring(sp + 1))) {
+                Serial.println("[cli] gespeichert, Neustart");
+                delay(100);
+                ESP.restart();
+            }
+            break;
+        }
+        case 'n': Serial.printf("[cli] %s\n", net::status_line().c_str()); break;
         default: help(); break;
     }
 }

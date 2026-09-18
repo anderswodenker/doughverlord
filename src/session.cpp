@@ -136,10 +136,6 @@ bool time_valid() { return now() >= TIME_PLAUSIBLE; }
 
 void begin()
 {
-    // Zeitzone einmal setzen; die Uhr selbst stellt spaeter NTP.
-    setenv("TZ", "CET-1CEST,M3.5.0,M10.5.0/3", 1);
-    tzset();
-
     prefs.begin(NVS_NS, false);
 
     zustand = (State)prefs.getUChar("zustand", (uint8_t)State::Idle);
