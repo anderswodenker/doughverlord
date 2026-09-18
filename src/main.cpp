@@ -8,8 +8,10 @@
 #include <lvgl.h>
 
 #include "LGFX_WT32SC01Plus.hpp"
+#include "cli.hpp"
 #include "recipe.hpp"
 #include "sd_card.hpp"
+#include "session.hpp"
 
 static LGFX_WT32SC01Plus lcd;
 
@@ -212,11 +214,23 @@ void setup()
         if (recipe::load(path.c_str(), r, err)) recipe::log(r);
         else Serial.printf("[rezept] %s: %s\n", path.c_str(), err.c_str());
     }
+
+    session::begin();
+    session::log_status();
 }
 
 void loop()
 {
     lv_timer_handler();
+    cli::poll();
+    session::tick();
+
+    // Ereignisse vorerst nur loggen; Alarm-Screen und Push kommen in Schritt 6.
+    switch (session::take_event()) {
+        case session::Event::Expired:  Serial.println("[ereignis] Alarm");   break;
+        case session::Event::Finished: Serial.println("[ereignis] Fertig");  break;
+        default: break;
+    }
 
     // Lebenszeichen: ein spaeter angehaengter Monitor sieht sonst gar nichts,
     // weil der Startbanner beim USB-Reset schon durch ist.
@@ -232,6 +246,7 @@ void loop()
                       (unsigned long)click_count,
                       touched ? "ja" : "nein",
                       sdcard::ready() ? "ok" : "fehlt");
+        if (session::active()) session::log_status();
     }
 
     // Rohe Touch-Koordinaten anzeigen (unabhaengig von LVGL-Widgets).
