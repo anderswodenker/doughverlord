@@ -23,9 +23,15 @@ constexpr int32_t FOOTER_H = 44;
 // Leerer, dunkler Screen ohne Rand und Scrollbalken.
 lv_obj_t *make_screen();
 
-// Kopfzeile: Text links, Uhr rechts. Liefert das Uhr-Label zum Nachfuehren.
-struct Header { lv_obj_t *root; lv_obj_t *title; lv_obj_t *clock; lv_obj_t *left_btn; };
+// Kopfzeile, auf allen Screens gleich: links optional ein Knopf (Zurueck
+// oder Abbruch), dann der Titel; rechts Verbrauch, WLAN-Symbol und Uhr.
+// Navigation und Information in einer Zeile. refresh_header() fuehrt die
+// rechte Seite nach -- aus dem 1-Hz-Tick jedes Screens aufrufen.
+struct Header { lv_obj_t *root; lv_obj_t *title; lv_obj_t *clock; lv_obj_t *wifi; lv_obj_t *watts; lv_obj_t *left_btn; };
 Header make_header(lv_obj_t *scr, const char *title, bool back_button);
+void   refresh_header(const Header &h);
+// Alle Texte der Kopfzeile in einer Farbe (Alarm: weiss auf rot).
+void   tint_header(const Header &h, uint32_t color);
 
 // Kraeftiger Knopf ueber die volle Breite.
 lv_obj_t *make_big_button(lv_obj_t *parent, const char *text, lv_event_cb_t cb, uint32_t color = COL_ACCENT);

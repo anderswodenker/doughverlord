@@ -11,7 +11,7 @@
 namespace {
 
 lv_obj_t   *scr    = nullptr;
-lv_obj_t   *lbl_clock  = nullptr;
+ui::Header  header{};
 lv_obj_t   *status = nullptr;
 std::vector<String> paths;
 
@@ -64,9 +64,8 @@ void add_item(lv_obj_t *list, size_t index, const String &path)
 void build()
 {
     scr = ui::make_screen();
-    ui::Header h = ui::make_header(scr, "Rezept wählen", true);
-    lv_obj_add_event_cb(h.left_btn, back_cb, LV_EVENT_CLICKED, nullptr);
-    lbl_clock = h.clock;
+    header = ui::make_header(scr, "Rezept wählen", true);
+    lv_obj_add_event_cb(header.left_btn, back_cb, LV_EVENT_CLICKED, nullptr);
 
     lv_obj_t *list = lv_obj_create(scr);
     lv_obj_set_size(list, lv_pct(100), 320 - ui::HEADER_H - 28);
@@ -98,14 +97,14 @@ void show()
 {
     if (scr) lv_obj_delete(scr);   // Liste jedes Mal neu: die Karte kann sich geaendert haben
     build();
-    refresh();
     lv_screen_load(scr);
+    refresh();   // erst nach dem Laden, sonst greift die Aktiv-Pruefung
 }
 
 void refresh()
 {
     if (!scr || lv_screen_active() != scr) return;
-    lv_label_set_text(lbl_clock, ui::clock_text());
+    ui::refresh_header(header);
     String s = net::wifi_connected() ? String("WLAN ") + net::ip() : String("kein WLAN");
     s += net::ntp_synced() ? " · Uhr per NTP" : " · Uhr nicht gestellt";
     lv_label_set_text(status, s.c_str());

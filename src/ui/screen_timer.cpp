@@ -1,5 +1,5 @@
 // Screen 3: der laufende Timer. Die Restzeit traegt den Screen, Kontext in
-// schmalen Zeilen oben (Rezept, Schritt, Uhr) und unten (Danach, Endzeit).
+// der Kopfzeile (Rezept, Schritt) und unten nur das Ziel: die Endzeit.
 // Das X links oben bricht das Backen ab (mit Rueckfrage) und fuehrt zum Dashboard.
 #include "../config.hpp"
 #include "../net.hpp"
@@ -11,9 +11,7 @@
 namespace {
 
 lv_obj_t *scr        = nullptr;
-lv_obj_t *title      = nullptr;
-lv_obj_t *lbl_clock      = nullptr;
-lv_obj_t *wifi       = nullptr;
+ui::Header header{};
 lv_obj_t *raffer     = nullptr;
 lv_obj_t *step_name  = nullptr;
 lv_obj_t *big        = nullptr;   // Restzeit: Zeile aus Einzelzeichen
@@ -27,8 +25,7 @@ lv_obj_t *bar        = nullptr;
 lv_obj_t *lbl_round      = nullptr;
 lv_obj_t *btn        = nullptr;
 lv_obj_t *btn_label  = nullptr;
-lv_obj_t *next       = nullptr;
-lv_obj_t *eta        = nullptr;
+lv_obj_t *eta        = nullptr;   // Fusszeile: Symbol + Endzeit, sonst nichts
 
 void confirm_cb(lv_event_t *)
 {
@@ -64,14 +61,9 @@ void center_cb(lv_event_t *)
 void build()
 {
     scr = ui::make_screen();
-    ui::Header h = ui::make_header(scr, "", true);
-    lv_label_set_text(lv_obj_get_child(h.left_btn, 0), LV_SYMBOL_CLOSE);
-    lv_obj_add_event_cb(h.left_btn, abort_cb, LV_EVENT_CLICKED, nullptr);
-    title = h.title;
-    lbl_clock = h.clock;
-
-    wifi = ui::make_label(h.root, LV_SYMBOL_WIFI, LV_FONT_DEFAULT, ui::COL_MUTED);
-    lv_obj_align_to(wifi, lbl_clock, LV_ALIGN_OUT_LEFT_MID, -10, 0);
+    header = ui::make_header(scr, "", true);
+    lv_label_set_text(lv_obj_get_child(header.left_btn, 0), LV_SYMBOL_CLOSE);
+    lv_obj_add_event_cb(header.left_btn, abort_cb, LV_EVENT_CLICKED, nullptr);
 
     // Mittelteil: eine Spalte, alles zentriert. Tippen oeffnet die Zutaten.
     lv_obj_t *body = lv_obj_create(scr);
@@ -118,7 +110,7 @@ void build()
     bar = lv_bar_create(body);
     lv_obj_set_size(bar, 400, 10);
     lv_bar_set_range(bar, 0, 1000);
-    lv_obj_set_style_bg_color(bar, lv_color_hex(ui::COL_PANEL), LV_PART_MAIN);
+    lv_obj_set_style_bg_color(bar, lv_color_hex(0x2A323C), LV_PART_MAIN);   // heller als das Panel, sonst unsichtbar
     lv_obj_set_style_bg_color(bar, lv_color_hex(ui::COL_ACCENT), LV_PART_INDICATOR);
 
     lbl_round = ui::make_label(body, "", &font_ms_20, ui::COL_MUTED);
@@ -138,12 +130,12 @@ void build()
     lv_obj_set_style_pad_ver(foot, 0, 0);
     lv_obj_set_scrollable(foot, false);
 
-    next = ui::make_label(foot, "", &font_ms_20, ui::COL_MUTED);
-    lv_obj_align(next, LV_ALIGN_LEFT_MID, 0, 0);
-    lv_label_set_long_mode(next, LV_LABEL_LONG_MODE_DOTS);
-    lv_obj_set_size(next, 250, 26);
-    eta = ui::make_label(foot, "", &font_ms_20);
-    lv_obj_align(eta, LV_ALIGN_RIGHT_MID, 0, 0);
+    // Nur ein Zielsymbol und die Endzeit, mittig -- kein Text.
+    lv_obj_set_flex_flow(foot, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(foot, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(foot, 10, 0);
+    ui::make_label(foot, LV_SYMBOL_GPS, LV_FONT_DEFAULT, ui::COL_MUTED);
+    eta = ui::make_label(foot, "", &font_ms_24);
 }
 
 // Setzt die grosse Restzeit zeichenweise in die festen Zellen.
@@ -162,40 +154,20 @@ void set_big(const char *text)
     }
 }
 
+// Voraussichtliches Ende als Uhrzeit; "+1" wenn es erst morgen ist.
 String eta_text()
 {
     const time_t t = session::eta_end();
-    if (!t) return session::time_valid() ? "" : "Endzeit: Uhr fehlt";
+    if (!t) return "--:--";
     const time_t now = time(nullptr);
     struct tm tn, te;
     localtime_r(&now, &tn);
     localtime_r(&t, &te);
     char buf[16];
     strftime(buf, sizeof buf, "%H:%M", &te);
-    String s = "Brot fertig ca. ";
-    if (te.tm_yday != tn.tm_yday) s += (te.tm_yday == tn.tm_yday + 1 || (tn.tm_yday > te.tm_yday)) ? "morgen " : "";
-    s += buf;
+    String s = buf;
+    if (te.tm_yday != tn.tm_yday) s += " +1";
     return s;
-}
-
-String next_text()
-{
-    const recipe::Recipe *r = session::current_recipe();
-    const recipe::Step   *s = session::current_step();
-    if (!r || !s) return "";
-    const uint16_t i = session::step_index();
-    if (!s->offen && session::round_index() + 1 < s->runden)
-        return String("Danach: Runde ") + (session::round_index() + 2) + " von " + s->runden;
-    if (i + 1 >= r->schritte.size()) return "Danach: fertig";
-    const recipe::Step &n = r->schritte[i + 1];
-    String t = String("Danach: ") + n.name;
-    if (!n.offen) {
-        t += " ";
-        const uint32_t d = n.dauer_s / session::time_factor();
-        t += recipe::format_duration(d ? d : 1);
-        if (n.runden > 1) t += String(" ×") + n.runden;
-    }
-    return t;
 }
 
 }  // namespace
@@ -205,8 +177,8 @@ namespace ui::timer {
 void show()
 {
     if (!scr) build();
-    refresh();
     lv_screen_load(scr);
+    refresh();
 }
 
 void ask_abort() { abort_cb(nullptr); }
@@ -215,15 +187,12 @@ void refresh()
 {
     if (!scr || lv_screen_active() != scr) return;
 
-    lv_label_set_text(lbl_clock, ui::clock_text());
-    lv_obj_set_style_text_color(wifi, lv_color_hex(net::wifi_connected() ? ui::COL_OK : ui::COL_MUTED), 0);
+    ui::refresh_header(header);
     if (session::time_factor() > 1) {
         lv_label_set_text_fmt(raffer, "ZEITRAFFER ×%lu", (unsigned long)session::time_factor());
     } else {
         lv_label_set_text(raffer, "");
     }
-    lv_obj_align_to(wifi, lbl_clock, LV_ALIGN_OUT_LEFT_MID, -10, 0);
-    lv_obj_align_to(raffer, wifi, LV_ALIGN_OUT_LEFT_MID, -14, 0);
 
     const recipe::Recipe *r = session::current_recipe();
     const recipe::Step   *s = session::current_step();
@@ -233,20 +202,19 @@ void refresh()
     for (lv_obj_t *o : { big, big_unit, lbl_word, hint, bar, lbl_round, btn }) lv_obj_set_hidden(o, true);
 
     if (st == session::State::Done) {
-        lv_label_set_text(title, "Fertig");
+        lv_label_set_text(header.title, "Fertig");
         lv_label_set_text(step_name, "");
         lv_label_set_text(lbl_word, "Brot fertig!");
         lv_obj_set_style_text_color(lbl_word, lv_color_hex(ui::COL_OK), 0);
         lv_obj_set_hidden(lbl_word, false);
         lv_label_set_text(btn_label, "Neues Brot");
         lv_obj_set_hidden(btn, false);
-        lv_label_set_text(next, "");
         lv_label_set_text(eta, "");
         return;
     }
-    if (!r || !s) { lv_label_set_text(title, "Kein Teig"); return; }
+    if (!r || !s) { lv_label_set_text(header.title, "Kein Teig"); return; }
 
-    lv_label_set_text_fmt(title, "%s · Schritt %u/%u", r->name.c_str(),
+    lv_label_set_text_fmt(header.title, "%s · Schritt %u/%u", r->name.c_str(),
                           session::step_index() + 1, (unsigned)r->schritte.size());
     lv_label_set_text(step_name, s->name.c_str());
     lv_label_set_text(btn_label, "Erledigt");
@@ -291,11 +259,7 @@ void refresh()
         }
     }
 
-    lv_label_set_text(next, next_text().c_str());
     lv_label_set_text(eta, eta_text().c_str());
-    // "Danach" bekommt den Platz, den die Endzeit uebrig laesst ("morgen" macht sie breiter).
-    lv_obj_update_layout(eta);
-    lv_obj_set_width(next, LV_MAX(60, 480 - 24 - lv_obj_get_width(eta) - 16));
 }
 
 }  // namespace ui::timer

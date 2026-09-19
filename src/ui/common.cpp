@@ -1,6 +1,8 @@
 #include "common.hpp"
 
+#include "../net.hpp"
 #include "../session.hpp"
+#include "../strom.hpp"
 
 namespace ui {
 
@@ -45,11 +47,34 @@ Header make_header(lv_obj_t *scr, const char *title, bool back_button)
     h.title = make_label(h.root, title, &font_ms_20);
     lv_obj_align(h.title, LV_ALIGN_LEFT_MID, title_x, 0);
     lv_label_set_long_mode(h.title, LV_LABEL_LONG_MODE_DOTS);
-    lv_obj_set_width(h.title, 300 - title_x);
+    lv_obj_set_size(h.title, 280 - title_x, 26);   // feste Hoehe, sonst bricht DOTS um statt zu kuerzen
 
     h.clock = make_label(h.root, clock_text(), &font_ms_20, COL_MUTED);
     lv_obj_align(h.clock, LV_ALIGN_RIGHT_MID, 0, 0);
+    h.wifi = make_label(h.root, LV_SYMBOL_WIFI, LV_FONT_DEFAULT, COL_MUTED);
+    h.watts = make_label(h.root, "", &font_ms_20, COL_MUTED);
+    refresh_header(h);
     return h;
+}
+
+void refresh_header(const Header &h)
+{
+    lv_label_set_text(h.clock, clock_text());
+    // Rot nur, wenn wirklich etwas fehlt; sonst unauffaellig wie der Rest.
+    lv_obj_set_style_text_color(h.wifi, lv_color_hex(net::wifi_connected() ? COL_MUTED : COL_ALARM), 0);
+    if (!strom::configured())  lv_label_set_text(h.watts, "");
+    else if (!strom::valid())  lv_label_set_text(h.watts, "– W");
+    else                       lv_label_set_text_fmt(h.watts, "%d W", strom::watts());
+    // Von rechts nach links stapeln, weil die Uhr am rechten Rand steht.
+    lv_obj_align_to(h.wifi, h.clock, LV_ALIGN_OUT_LEFT_MID, -10, 0);
+    lv_obj_align_to(h.watts, h.wifi, LV_ALIGN_OUT_LEFT_MID, -14, 0);
+}
+
+void tint_header(const Header &h, uint32_t color)
+{
+    for (lv_obj_t *o : { h.title, h.clock, h.watts }) lv_obj_set_style_text_color(o, lv_color_hex(color), 0);
+    // WLAN-Symbol behaelt seine Warnfarbe; nur die Grundfarbe umstellen.
+    if (net::wifi_connected()) lv_obj_set_style_text_color(h.wifi, lv_color_hex(color), 0);
 }
 
 lv_obj_t *make_big_button(lv_obj_t *parent, const char *text, lv_event_cb_t cb, uint32_t color)

@@ -102,7 +102,7 @@ einem eigenen Python 3.12 aus dem uv-Tool-Env.
 | `src/config.{hpp,cpp}` | `/config.json` von SD: WLAN, `zeitraffer`, `ntfy_topic`, `ntfy_server`, `mqtt`; legt sie aus `secrets.hpp` an, trägt fehlenden `mqtt`-Block nach |
 | `src/net.{hpp,cpp}` | WLAN mit Auto-Reconnect, SNTP (Zeitzone Berlin), Statuszeile, `notify()` per ntfy in eigenem Task |
 | `src/strom.{hpp,cpp}` | Stromzähler per MQTT (`esp_mqtt`, eigener Task): letzter Wert, Alter, Status; `Power_curr`/`Total_in` aus dem ersten Objekt, das sie hat |
-| `src/ui/` | `ui.cpp` (Navigation, 1-Hz-Refresh, Dimmen), `common.cpp` (Farben, Header, Buttons, `confirm()`-Overlay), `screen_*.cpp` (`home` = Dashboard, `alarm` = Vollbild-Alarm) |
+| `src/ui/` | `ui.cpp` (Navigation, 1-Hz-Refresh, Dimmen), `common.cpp` (Farben, Header mit Verbrauch/WLAN/Uhr, Buttons, `confirm()`-Overlay), `screen_*.cpp` (`home` = Dashboard, `alarm` = Vollbild-Alarm) |
 | `src/cli.{hpp,cpp}` | serielle Kommandos, siehe unten |
 | `src/screenshot.{hpp,cpp}` | Screen als Base64 über USB |
 | `include/secrets.hpp` | WLAN-Zugang, **gitignored**; Vorlage `secrets.example.hpp` |
@@ -132,6 +132,10 @@ Config → Net (setzt TZ) → Strom → Session → UI.
   Bar-Widget). Der Client startet erst, wenn WLAN steht (`strom::tick()`).
 - Screens setzen `refresh()` **nach** `lv_screen_load()` ab — die Aktiv-Prüfung
   in `refresh()` greift sonst und der Screen bleibt leer.
+- Der Header ist auf allen Screens gleich (`make_header`): links Knopf + Titel,
+  rechts Verbrauch · WLAN · Uhr; jeder Screen ruft `refresh_header()` im Tick.
+  Titel in DOTS-Modus braucht eine **feste Höhe**, sonst bricht er um.
+  Timer-Footer zeigt nur `LV_SYMBOL_GPS` + Endzeit (`+1` = morgen), kein Text.
 - Alarm ist kein Zustand, sondern `ui::alarm_active()` = `Waiting` und Schritt
   nicht offen; `ui::tick()` schaltet danach um. Der Push hängt am Ereignis
   `Expired`/`Finished` in `loop()` — nach einem Reset mit schon abgelaufenem

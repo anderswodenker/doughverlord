@@ -9,7 +9,7 @@
 namespace {
 
 lv_obj_t      *scr     = nullptr;
-lv_obj_t      *lbl_clock   = nullptr;
+ui::Header     header{};
 lv_obj_t      *msg     = nullptr;
 recipe::Recipe current;
 bool           can_start = false;
@@ -58,9 +58,8 @@ void build()
 {
     scr = ui::make_screen();
     const String title = current.name + " · Zutaten";
-    ui::Header h = ui::make_header(scr, title.c_str(), true);
-    lbl_clock = h.clock;
-    lv_obj_add_event_cb(h.left_btn, back_cb, LV_EVENT_CLICKED, nullptr);
+    header = ui::make_header(scr, title.c_str(), true);
+    lv_obj_add_event_cb(header.left_btn, back_cb, LV_EVENT_CLICKED, nullptr);
 
     const int32_t footer = can_start ? 76 : 0;
     lv_obj_t *list = lv_obj_create(scr);
@@ -107,14 +106,14 @@ void show(const recipe::Recipe &r, bool startable)
     can_start = startable;
     if (scr) lv_obj_delete(scr);
     build();
-    refresh();
     lv_screen_load(scr);
+    refresh();
 }
 
 void refresh()
 {
     if (!scr || lv_screen_active() != scr) return;
-    lv_label_set_text(lbl_clock, ui::clock_text());
+    ui::refresh_header(header);
 }
 
 }  // namespace ui::ingredients

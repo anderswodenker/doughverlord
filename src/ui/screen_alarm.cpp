@@ -10,8 +10,7 @@
 namespace {
 
 lv_obj_t *scr       = nullptr;
-lv_obj_t *lbl_clock = nullptr;
-lv_obj_t *title     = nullptr;
+ui::Header header{};
 lv_obj_t *lbl_step  = nullptr;
 lv_obj_t *lbl_now   = nullptr;
 lv_obj_t *lbl_items = nullptr;
@@ -33,12 +32,8 @@ void build()
 {
     scr = ui::make_screen();
     lv_obj_set_style_bg_color(scr, lv_color_hex(0x3A1410), 0);   // dunkles Rot: faellt auf, blendet nachts nicht
-    ui::Header h = ui::make_header(scr, "Zeit ist um", false);
-    lv_obj_set_style_bg_color(h.root, lv_color_hex(ui::COL_ALARM), 0);
-    lv_obj_set_style_text_color(h.title, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_text_color(h.clock, lv_color_hex(0xFFFFFF), 0);
-    title = h.title;
-    lbl_clock = h.clock;
+    header = ui::make_header(scr, "Zeit ist um", false);
+    lv_obj_set_style_bg_color(header.root, lv_color_hex(ui::COL_ALARM), 0);
 
     lv_obj_t *body = lv_obj_create(scr);
     lv_obj_set_size(body, lv_pct(100), 320 - ui::HEADER_H - 72);
@@ -124,13 +119,14 @@ void show()
 void refresh()
 {
     if (!scr || lv_screen_active() != scr) return;
-    lv_label_set_text(lbl_clock, ui::clock_text());
+    ui::refresh_header(header);
+    ui::tint_header(header, 0xFFFFFF);
 
     const recipe::Recipe *r = session::current_recipe();
     const recipe::Step   *s = session::current_step();
     if (!r || !s) { lv_label_set_text(lbl_step, "Kein Teig"); return; }
 
-    lv_label_set_text_fmt(title, "Zeit ist um · %s", r->name.c_str());
+    lv_label_set_text_fmt(header.title, "Zeit ist um · %s", r->name.c_str());
     lv_label_set_text(lbl_step, s->name.c_str());
 
     String head, items, hint;
