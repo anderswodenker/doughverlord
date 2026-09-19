@@ -2,7 +2,6 @@
 // zum Antippen, mit Schrittzahl und Timerzeit als Vorschau.
 #include <vector>
 
-#include "../net.hpp"
 #include "../sd_card.hpp"
 #include "common.hpp"
 #include "screens.hpp"
@@ -12,7 +11,7 @@ namespace {
 
 lv_obj_t   *scr    = nullptr;
 ui::Header  header{};
-lv_obj_t   *status = nullptr;
+lv_obj_t   *status = nullptr;   // nur fuer Fehler beim Laden eines Rezepts
 std::vector<String> paths;
 
 void back_cb(lv_event_t *) { ui::show_home(); }
@@ -104,11 +103,7 @@ void show()
 void refresh()
 {
     if (!scr || lv_screen_active() != scr) return;
-    ui::refresh_header(header);
-    String s = net::wifi_connected() ? String("WLAN ") + net::ip() : String("kein WLAN");
-    s += net::ntp_synced() ? " · Uhr per NTP" : " · Uhr nicht gestellt";
-    lv_label_set_text(status, s.c_str());
-    lv_obj_set_style_text_color(status, lv_color_hex(ui::COL_MUTED), 0);
+    ui::refresh_header(header);   // WLAN-Status steht im Header, sonst nichts
 }
 
 }  // namespace ui::select
