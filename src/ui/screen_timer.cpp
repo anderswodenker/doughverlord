@@ -18,7 +18,6 @@ lv_obj_t *big        = nullptr;   // Restzeit: Zeile aus Einzelzeichen
 lv_obj_t *big_cell[5] = {};       // je ein Label pro Zeichen, feste Zellbreite
 int32_t   digit_w    = 0;         // breiteste Ziffer der 96er
 int32_t   colon_w    = 0;
-lv_obj_t *big_unit   = nullptr;   // "Stunden : Minuten" o. ae.
 lv_obj_t *lbl_word       = nullptr;   // Text statt Ziffern (48): "Erledigt?", "Brot fertig"
 lv_obj_t *hint       = nullptr;
 lv_obj_t *bar        = nullptr;
@@ -82,6 +81,7 @@ void build()
     // Zeitraffer deutlich markieren, damit niemand den Modus mit echtem Teig benutzt.
     raffer    = ui::make_label(body, "", &font_ms_20, ui::COL_ALARM);
     step_name = ui::make_label(body, "", &font_ms_28);
+    lv_obj_set_style_margin_bottom(step_name, 14, 0);   // Luft zwischen Schrittname und Restzeit
     // Montserrat hat proportionale Ziffern (die 1 ist schmal) -- damit die
     // Stellen nicht wandern, bekommt jedes Zeichen eine Zelle fester Breite.
     for (char c = '0'; c <= '9'; c++)
@@ -100,7 +100,6 @@ void build()
         cell = ui::make_label(big, "", &font_ms_96);
         lv_obj_set_style_text_align(cell, LV_TEXT_ALIGN_CENTER, 0);
     }
-    big_unit  = ui::make_label(body, "", &font_ms_16, ui::COL_MUTED);
     lbl_word      = ui::make_label(body, "", &font_ms_48, ui::COL_ACCENT);
     hint      = ui::make_label(body, "", &font_ms_20, ui::COL_MUTED);
     lv_label_set_long_mode(hint, LV_LABEL_LONG_MODE_WRAP);
@@ -199,7 +198,7 @@ void refresh()
     const session::State  st = session::state();
 
     // Alles ausblenden, dann je nach Zustand einblenden.
-    for (lv_obj_t *o : { big, big_unit, lbl_word, hint, bar, lbl_round, btn }) lv_obj_set_hidden(o, true);
+    for (lv_obj_t *o : { big, lbl_word, hint, bar, lbl_round, btn }) lv_obj_set_hidden(o, true);
 
     if (st == session::State::Done) {
         lv_label_set_text(header.title, "Fertig");
@@ -239,17 +238,14 @@ void refresh()
             lv_obj_set_style_text_color(lbl_word, lv_color_hex(ui::COL_MUTED), 0);
             lv_obj_set_hidden(lbl_word, false);
         } else {
+            // Ab einer Stunde h:mm (ohne fuehrende Null), darunter mm:ss --
+            // die fuehrende Null ist der einzige Unterschied, ein Einheitentext
+            // steht bewusst nicht mehr darunter.
             char t[8];
-            if (rest >= 3600) {
-                snprintf(t, sizeof t, "%ld:%02ld", (long)(rest / 3600), (long)((rest % 3600) / 60));
-                lv_label_set_text(big_unit, "Stunden : Minuten");
-            } else {
-                snprintf(t, sizeof t, "%02ld:%02ld", (long)(rest / 60), (long)(rest % 60));
-                lv_label_set_text(big_unit, "Minuten : Sekunden");
-            }
+            if (rest >= 3600) snprintf(t, sizeof t, "%ld:%02ld", (long)(rest / 3600), (long)((rest % 3600) / 60));
+            else              snprintf(t, sizeof t, "%02ld:%02ld", (long)(rest / 60), (long)(rest % 60));
             set_big(t);
             lv_obj_set_hidden(big, false);
-            lv_obj_set_hidden(big_unit, false);
             const uint32_t d = session::step_duration_s();
             if (d) {
                 lv_bar_set_value(bar, (int32_t)(1000 - (int64_t)rest * 1000 / d), LV_ANIM_OFF);

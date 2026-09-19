@@ -1,5 +1,5 @@
 // Screen 2: Zutaten -- Mengen rechtsbuendig untereinander, Schritt-Zutaten
-// mit Vermerk. Vor dem Start mit dem Knopf "Zusammengemischt -- los",
+// mit Vermerk. Vor dem Start mit dem Knopf "Fertig" (= zusammengemischt, los),
 // waehrend des Ablaufs nur zum Nachschlagen.
 #include "../session.hpp"
 #include "common.hpp"
@@ -89,7 +89,7 @@ void build()
         lv_obj_set_style_pad_hor(box, 16, 0);
         lv_obj_set_style_pad_ver(box, 10, 0);
         lv_obj_set_scrollable(box, false);
-        ui::make_big_button(box, "Zusammengemischt — los", start_cb);
+        ui::make_big_button(box, "Fertig", start_cb);
 
         msg = ui::make_label(scr, "", &font_ms_16, ui::COL_ALARM);
         lv_obj_align(msg, LV_ALIGN_BOTTOM_LEFT, 16, -80);
