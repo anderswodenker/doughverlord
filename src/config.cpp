@@ -37,6 +37,7 @@ void defaults()
     cfg.wifi_pass  = SECRET_WIFI_PASS;
     cfg.zeitraffer = 1;
     cfg.ntfy_topic = "";
+    cfg.ntfy_server = "https://ntfy.sh";
     cfg.mqtt.host  = SECRET_MQTT_HOST;
     cfg.mqtt.port  = SECRET_MQTT_PORT;
     cfg.mqtt.user  = SECRET_MQTT_USER;
@@ -51,6 +52,7 @@ bool write()
     doc["wlan"]["passwort"] = cfg.wifi_pass;
     doc["zeitraffer"]       = cfg.zeitraffer;
     doc["ntfy_topic"]       = cfg.ntfy_topic;
+    doc["ntfy_server"]      = cfg.ntfy_server;
     doc["mqtt"]["host"]     = cfg.mqtt.host;
     doc["mqtt"]["port"]     = cfg.mqtt.port;
     doc["mqtt"]["user"]     = cfg.mqtt.user;
@@ -97,6 +99,8 @@ const Config &load()
     if (doc["wlan"]["passwort"].is<const char *>()) cfg.wifi_pass  = doc["wlan"]["passwort"].as<const char *>();
     if (doc["zeitraffer"].is<uint32_t>())           cfg.zeitraffer = doc["zeitraffer"].as<uint32_t>();
     if (doc["ntfy_topic"].is<const char *>())       cfg.ntfy_topic = doc["ntfy_topic"].as<const char *>();
+    if (doc["ntfy_server"].is<const char *>())      cfg.ntfy_server = doc["ntfy_server"].as<const char *>();
+    if (!cfg.ntfy_server.length()) cfg.ntfy_server = "https://ntfy.sh";
     if (cfg.zeitraffer == 0) cfg.zeitraffer = 1;
 
     JsonObject mq = doc["mqtt"];
@@ -125,6 +129,13 @@ bool save_wifi(const String &ssid, const String &pass)
     if (!sdcard::ready()) return false;
     cfg.wifi_ssid = ssid;
     cfg.wifi_pass = pass;
+    return write();
+}
+
+bool save_ntfy(const String &topic)
+{
+    if (!sdcard::ready()) return false;
+    cfg.ntfy_topic = topic;
     return write();
 }
 

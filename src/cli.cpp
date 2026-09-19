@@ -4,6 +4,7 @@
 #include <sys/time.h>
 
 #include "config.hpp"
+#include "display.hpp"
 #include "net.hpp"
 #include "recipe.hpp"
 #include "screenshot.hpp"
@@ -29,7 +30,10 @@ void help()
     Serial.println("[cli]   m -         Stromzaehler abschalten");
     Serial.println("[cli]   n           Netzstatus");
     Serial.println("[cli]   shot        Screenshot als Base64 (tools/screenshot.py)");
-    Serial.println("[cli]   u h|s|z|t|a Screen anzeigen: Dashboard, Auswahl, Zutaten, Timer, Abbruch-Rueckfrage");
+    Serial.println("[cli]   u h|s|z|t|a|l Screen anzeigen: Dashboard, Auswahl, Zutaten, Timer, Abbruch-Rueckfrage, Alarm");
+    Serial.println("[cli]   push [text] Test-Push per ntfy");
+    Serial.println("[cli]   ntfy <topic>|-  Push-Topic in /config.json");
+    Serial.println("[cli]   b <0-255>   Helligkeit setzen (ui::tick holt sie nach 1 s zurueck)");
 }
 
 void handle(String line)
@@ -37,6 +41,20 @@ void handle(String line)
     line.trim();
     if (!line.length()) return;
     if (line == "shot") { screenshot::dump(); return; }
+    if (line.startsWith("push")) {          // Test-Push, Text optional
+        String t = line.substring(4); t.trim();
+        net::notify("Test vom Teig-Timer", t.length() ? t : String("Push funktioniert."));
+        return;
+    }
+    if (line.startsWith("ntfy")) {          // Topic in config.json, gilt sofort
+        String t = line.substring(4); t.trim();
+        if (t == "-") t = "";
+        if (config::save_ntfy(t)) {
+            net::set_ntfy(config::get().ntfy_server, t);
+            Serial.printf("[cli] ntfy-Topic: %s\n", t.length() ? t.c_str() : "aus");
+        } else Serial.println("[cli] konnte config.json nicht schreiben");
+        return;
+    }
     const char cmd = line[0];
     String arg = line.substring(1);
     arg.trim();
@@ -103,12 +121,15 @@ void handle(String line)
             }
             break;
         }
-        case 'n': Serial.printf("[cli] %s %s\n", net::status_line().c_str(), strom::status_line().c_str()); break;
+        case 'b': display::set_brightness((uint8_t)arg.toInt()); break;
+        case 'n': Serial.printf("[cli] %s %s ntfy=%s hell=%u\n", net::status_line().c_str(), strom::status_line().c_str(),
+                                net::ntfy_configured() ? "ok" : "--", display::brightness()); break;
         case 'u': {   // Screens ohne Touch anspringen (fuer Screenshots)
             if (arg == "h") ui::show_home();
             else if (arg == "s") ui::show_select();
             else if (arg == "t") ui::show_timer();
             else if (arg == "a") { ui::show_timer(); ui::timer::ask_abort(); }
+            else if (arg == "l") ui::show_alarm();
             else if (arg == "z") {
                 const recipe::Recipe *r = session::current_recipe();
                 recipe::Recipe tmp; String err;

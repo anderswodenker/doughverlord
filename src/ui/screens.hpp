@@ -9,5 +9,6 @@ namespace home        { void show(); void refresh(); }
 namespace select      { void show(); void refresh(); }
 namespace ingredients { void show(const recipe::Recipe &r, bool startable); void refresh(); }
 namespace timer       { void show(); void refresh(); void ask_abort(); }
+namespace alarm       { void show(); void refresh(); void describe_next(String &head, String &items, String &hint); }
 
 }  // namespace ui

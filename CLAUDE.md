@@ -19,10 +19,14 @@ CLI `m …` in der `config.json` der Karte. Außerdem **Abbruch über die UI**: 
 X im Timer-Header fragt nach (`ui::confirm()`) und führt zurück aufs Dashboard —
 damit ist der Teil von Schritt 7 erledigt.
 
-**Offen:** Schritt 6 (Vollbild-Alarm, Push, Dimmen nach 60 s), Schritt 7
-(Schrittliste als Overlay, Status-Screen), Schritt 8 (Doku). Für den Push fehlt die Entscheidung
-**ntfy oder MQTT** und das Topic — beim User erfragen. Dimmen bleibt drin, auch
-wenn es ein IPS ist: das Gerät steht nachts in der Küche.
+**Schritt 6 ist fertig** (2026-09-19, am Gerät im Zeitraffer verifiziert):
+Vollbild-Alarm (`screen_alarm.cpp`), Push per **ntfy** (`net::notify()`, JSON-POST
+in eigenem Task), Dimmen nach 60 s auf `BRIGHT_DIM`, Alarm hält volle Helligkeit.
+Das Push-Topic in der `config.json` ist noch ein **Wegwerf-Topic vom Test**
+(`teigtimer-test-…`) — der User trägt seins per CLI `ntfy <topic>` ein.
+
+**Offen:** Schritt 7 (Schrittliste als Overlay, Status-Screen), Schritt 8 (Doku).
+Dimmen bleibt drin, auch wenn es ein IPS ist: das Gerät steht nachts in der Küche.
 
 ## Hardware (am 2026-09-18 per esptool ausgelesen, nicht geraten)
 
@@ -95,10 +99,10 @@ einem eigenen Python 3.12 aus dem uv-Tool-Env.
 | `src/sd_card.{hpp,cpp}` | SD an SPI (CLK 39, MISO 38, MOSI 40, CS 41), Listing, Beispielrezept anlegen |
 | `src/recipe.{hpp,cpp}` | JSON → `Recipe`/`Step`/`Ingredient`, `parse_duration("1h30min")`, `format_duration()` |
 | `src/session.{hpp,cpp}` | Zustandsautomat (läuft/wartet/fertig), Runden, NVS, Restzeit, ETA, Zeitraffer, Ereignisse |
-| `src/config.{hpp,cpp}` | `/config.json` von SD: WLAN, `zeitraffer`, `ntfy_topic`, `mqtt`; legt sie aus `secrets.hpp` an, trägt fehlenden `mqtt`-Block nach |
-| `src/net.{hpp,cpp}` | WLAN mit Auto-Reconnect, SNTP (Zeitzone Berlin), Statuszeile |
+| `src/config.{hpp,cpp}` | `/config.json` von SD: WLAN, `zeitraffer`, `ntfy_topic`, `ntfy_server`, `mqtt`; legt sie aus `secrets.hpp` an, trägt fehlenden `mqtt`-Block nach |
+| `src/net.{hpp,cpp}` | WLAN mit Auto-Reconnect, SNTP (Zeitzone Berlin), Statuszeile, `notify()` per ntfy in eigenem Task |
 | `src/strom.{hpp,cpp}` | Stromzähler per MQTT (`esp_mqtt`, eigener Task): letzter Wert, Alter, Status; `Power_curr`/`Total_in` aus dem ersten Objekt, das sie hat |
-| `src/ui/` | `ui.cpp` (Navigation, 1-Hz-Refresh), `common.cpp` (Farben, Header, Buttons, `confirm()`-Overlay), `screen_*.cpp` (`home` = Dashboard) |
+| `src/ui/` | `ui.cpp` (Navigation, 1-Hz-Refresh, Dimmen), `common.cpp` (Farben, Header, Buttons, `confirm()`-Overlay), `screen_*.cpp` (`home` = Dashboard, `alarm` = Vollbild-Alarm) |
 | `src/cli.{hpp,cpp}` | serielle Kommandos, siehe unten |
 | `src/screenshot.{hpp,cpp}` | Screen als Base64 über USB |
 | `include/secrets.hpp` | WLAN-Zugang, **gitignored**; Vorlage `secrets.example.hpp` |
@@ -128,6 +132,16 @@ Config → Net (setzt TZ) → Strom → Session → UI.
   Bar-Widget). Der Client startet erst, wenn WLAN steht (`strom::tick()`).
 - Screens setzen `refresh()` **nach** `lv_screen_load()` ab — die Aktiv-Prüfung
   in `refresh()` greift sonst und der Screen bleibt leer.
+- Alarm ist kein Zustand, sondern `ui::alarm_active()` = `Waiting` und Schritt
+  nicht offen; `ui::tick()` schaltet danach um. Der Push hängt am Ereignis
+  `Expired`/`Finished` in `loop()` — nach einem Reset mit schon abgelaufenem
+  Timer feuert `Expired` erneut, also auch der Push (gewollt).
+- `net::notify()` postet JSON an `ntfy_server/` (nicht an `/topic`), damit
+  Umlaute im Titel gehen; TLS ohne Zertifikatsprüfung (`setInsecure`).
+  Ein Push zur Zeit; läuft noch einer, wird der neue nur geloggt.
+- Dimmen sitzt in `ui::tick()`: `idle_ms() > 60 s` und kein Alarm →
+  `BRIGHT_DIM`, sonst `BRIGHT_FULL`. Die erste Berührung im Dunkeln kommt
+  auch als Klick an — bei 15 % ist der Screen aber lesbar.
 - `ui::confirm()` legt das Overlay auf den **aktiven Screen** (nicht
   `lv_layer_top()`), damit es mit einem Screenwechsel durch `ui::tick()`
   verschwindet und nicht über dem nächsten Screen hängen bleibt.
@@ -141,9 +155,12 @@ s <datei>   Rezept starten, z. B. s bauernbrot.json
 c           Erledigt          x  Teig verwerfen        p  Status
 l           Rezepte listen    f <n>  Zeitraffer (nur RAM, bis Reset)
 t <unix>    Uhr stellen       w <ssid> <pass>  WLAN in config.json, Neustart
-n           Netz-/Stromstatus u h|s|z|t|a  Screen anspringen (Dashboard/Auswahl/Zutaten/Timer/Abbruch-Rückfrage)
+n           Status (Netz, Strom, ntfy, Helligkeit)
+u h|s|z|t|a|l  Screen anspringen (Dashboard/Auswahl/Zutaten/Timer/Abbruch-Rückfrage/Alarm)
 m <host> <port> <user|-> <pass|-> <topic>   Stromzähler-MQTT in config.json, Neustart
 m -         Stromzähler aus
+ntfy <topic>|-  Push-Topic in config.json (gilt sofort)     push [text]  Test-Push
+b <0-255>   Helligkeit setzen (ui::tick holt sie nach 1 s zurück)
 shot        Screenshot als Base64
 ```
 
@@ -157,12 +174,13 @@ Zum Verifizieren nach Änderungen hat sich bewährt: Skript, das per pyserial
 Kommandos schickt, Board per RTS resettet und `[teig]`-Zeilen mitliest —
 so wurden Resets mitten im Schritt und der ganze Ablauf im Zeitraffer geprüft.
 
-## Weiter mit Schritt 6
+## Weiter mit Schritt 7
 
-Plan in `PLAN.md`, Abschnitt „Umsetzung". Anknüpfpunkte im Code:
-`session::take_event()` liefert `Expired`/`Finished` (in `loop()` bisher nur
-geloggt), `display::idle_ms()` und `display::set_brightness()` sind für das
-Dimmen da, `config::get().ntfy_topic` ist vorbereitet, `net::notify()` fehlt.
+Plan in `PLAN.md`, Abschnitt „Umsetzung". Schrittliste als Overlay: im Timer
+tippt man aufs Zentrum (`center_cb`), das zeigt bisher die Zutaten. Status-Screen:
+`net::status_line()`, `strom::status_line()`, `net::ntfy_configured()`,
+`sdcard::ready()` liefern alles, was draufgehört. Zum Prüfen des Pushs ohne
+Handy: `curl -s "https://ntfy.sh/<topic>/json?poll=1&since=15m"`.
 
 **Noch offen bleibt der Backprozess selbst** — welche Brotsorten, Schritte,
 Dauern. Das ist das Handwerk des Users. Beim Erstellen der echten Rezepte

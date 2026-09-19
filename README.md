@@ -5,7 +5,8 @@ Sauerteigrezepts führt. Rezepte als JSON auf der SD-Karte, Zustand im NVS
 (überlebt Reset und Stromausfall), Uhr per NTP. Ohne laufenden Teig zeigt das
 Gerät ein Dashboard mit Uhrzeit, Datum und dem Hausverbrauch vom Stromzähler
 (per MQTT); „Backen" führt zur Rezeptauswahl, das X im Timer bricht den Teig
-nach Rückfrage ab. Läuft auf dem WT32-SC01 Plus
+nach Rückfrage ab. Läuft ein Timer ab, gibt es einen Vollbild-Alarm und einen
+Push per ntfy aufs Handy; nachts dimmt das Display. Läuft auf dem WT32-SC01 Plus
 (ESP32-S3, 3.5"-Touch, LVGL 9 über LovyanGFX). Konzept: [`PLAN.md`](PLAN.md),
 Details für Agenten: [`CLAUDE.md`](CLAUDE.md).
 
@@ -71,6 +72,10 @@ Stromzähler: `mqtt` in `/config.json` (`host`, `port`, `user`, `passwort`,
 (`Power_curr` in W, `Total_in` in kWh). Ohne die Karte zu ziehen, geht es über
 das serielle CLI: `m <host> <port> <user> <passwort> <topic>` (`-` für leer),
 das Gerät startet danach neu. `host` leer = Dashboard ohne Verbrauch.
+
+Push: `ntfy_topic` in `/config.json` (oder per CLI `ntfy <topic>`), in der
+ntfy-App dasselbe Topic abonnieren. `ntfy_server` zeigt auf `https://ntfy.sh`,
+für eine eigene Instanz umbiegen. `push` im CLI schickt eine Testnachricht.
 
 Rezepte: eine Datei je Brot in `/rezepte/`, Format siehe `PLAN.md` bzw.
 `sd/rezepte/bauernbrot.json`. Schrittarten: feste `dauer`, `dauer` + `runden`,

@@ -14,6 +14,7 @@
 #include "sd_card.hpp"
 #include "session.hpp"
 #include "strom.hpp"
+#include "ui/screens.hpp"
 #include "ui/ui.hpp"
 
 static void log_board_info(void)
@@ -54,6 +55,7 @@ void setup()
     // Reihenfolge: Konfiguration -> Netz (setzt die Zeitzone) -> Sitzung -> UI.
     const config::Config &cfg = config::load();
     net::begin(cfg.wifi_ssid, cfg.wifi_pass);
+    net::set_ntfy(cfg.ntfy_server, cfg.ntfy_topic);
     strom::begin(cfg.mqtt);
     session::set_time_factor(cfg.zeitraffer);
     session::begin();
@@ -71,10 +73,24 @@ void loop()
     strom::tick();
     ui::tick();
 
-    // Ereignisse vorerst nur loggen; Alarm-Screen und Push kommen in Schritt 6.
+    // Alarm-Screen zieht ui::tick() aus dem Zustand; hier nur der Push.
     switch (session::take_event()) {
-        case session::Event::Expired:  Serial.println("[ereignis] Alarm");   break;
-        case session::Event::Finished: Serial.println("[ereignis] Fertig");  break;
+        case session::Event::Expired: {
+            const recipe::Recipe *r = session::current_recipe();
+            const recipe::Step   *s = session::current_step();
+            String head, items, hint;
+            ui::alarm::describe_next(head, items, hint);
+            String text = r ? r->name : String("");
+            if (head.length())  text += " · " + head;
+            if (items.length()) text += " (" + items + ")";
+            net::notify(String("Zeit ist um: ") + (s ? s->name : String("?")), text);
+            break;
+        }
+        case session::Event::Finished: {
+            const recipe::Recipe *r = session::current_recipe();
+            net::notify("Brot fertig!", r ? r->name + " ist durch." : String("Rezept ist durch."));
+            break;
+        }
         default: break;
     }
 

@@ -14,5 +14,7 @@ void show_home();
 void show_select();
 void show_ingredients(const recipe::Recipe &r, bool startable);
 void show_timer();
+void show_alarm();
+bool alarm_active();   // Timer abgelaufen, wartet auf Erledigt
 
 }  // namespace ui

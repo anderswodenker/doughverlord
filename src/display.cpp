@@ -16,7 +16,7 @@ constexpr int32_t SCREEN_H = 320;
 constexpr uint32_t BUF_LINES = 40;
 lv_color_t draw_buf[SCREEN_W * BUF_LINES];
 
-uint8_t  current_brightness = 200;
+uint8_t  current_brightness = display::BRIGHT_FULL;
 uint32_t last_touch_ms      = 0;
 
 uint32_t tick_cb(void) { return millis(); }

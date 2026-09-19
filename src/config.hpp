@@ -23,6 +23,7 @@ struct Config {
     String   wifi_pass;
     uint32_t zeitraffer = 1;    // Dauern durch diesen Faktor teilen (nur zum Testen)
     String   ntfy_topic;        // leer = kein Push
+    String   ntfy_server;       // Vorgabe https://ntfy.sh, fuer eigene Instanzen
     Mqtt     mqtt;
 };
 
@@ -35,5 +36,7 @@ const Config &get();
 bool save_wifi(const String &ssid, const String &pass);
 // Dito fuer den Stromzaehler.
 bool save_mqtt(const Mqtt &m);
+// Dito fuer das Push-Topic.
+bool save_ntfy(const String &topic);
 
 }  // namespace config
