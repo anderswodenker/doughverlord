@@ -43,7 +43,7 @@ void handle(String line)
     if (line == "shot") { screenshot::dump(); return; }
     if (line.startsWith("push")) {          // Test-Push, Text optional
         String t = line.substring(4); t.trim();
-        net::notify("Test vom Teig-Timer", t.length() ? t : String("Push funktioniert."));
+        net::notify("Test vom Doughverlord", t.length() ? t : String("Push funktioniert."));
         return;
     }
     if (line.startsWith("ntfy")) {          // Topic in config.json, gilt sofort

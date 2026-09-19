@@ -1,7 +1,7 @@
-# Sauerteig-Timer auf dem WT32-SC01 Plus
+# Doughverlord
 
-Ein Timer, der nach dem Zusammenmischen durch die Schrittkette eines
-Sauerteigrezepts führt. Rezepte als JSON auf der SD-Karte, Zustand im NVS
+Sauerteig-Timer mit Dashboard auf dem WT32-SC01 Plus. Ein Timer, der nach dem
+Zusammenmischen durch die Schrittkette eines Sauerteigrezepts führt. Rezepte als JSON auf der SD-Karte, Zustand im NVS
 (überlebt Reset und Stromausfall), Uhr per NTP. Ohne laufenden Teig zeigt das
 Gerät ein Dashboard mit Uhrzeit, Datum und dem Hausverbrauch vom Stromzähler
 (per MQTT, Momentanwert im Header, die letzten 24 h als Linie); „Backen" führt

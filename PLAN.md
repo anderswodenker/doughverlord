@@ -1,4 +1,4 @@
-# Sauerteig-Timer auf dem WT32-SC01 Plus
+# Doughverlord — Sauerteig-Timer auf dem WT32-SC01 Plus
 
 ## Kontext
 

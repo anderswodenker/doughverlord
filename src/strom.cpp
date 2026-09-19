@@ -164,7 +164,7 @@ void begin(const config::Mqtt &m)
     c.port        = conf.port;
     c.username    = conf.user.length() ? conf.user.c_str() : nullptr;
     c.password    = conf.pass.length() ? conf.pass.c_str() : nullptr;
-    c.client_id   = "teig-timer";
+    c.client_id   = "doughverlord";
     c.buffer_size = 2048;          // Tasmota-Telegramm liegt bei einigen hundert Bytes
     c.reconnect_timeout_ms = 10000;
     client = esp_mqtt_client_init(&c);

@@ -1,4 +1,4 @@
-// Die Screens des Sauerteig-Timers. ui::begin() baut alles auf und zeigt
+// Die Screens des Doughverlord. ui::begin() baut alles auf und zeigt
 // je nach Sitzungszustand das Dashboard (Uhr, Stromverbrauch, "Backen")
 // oder den laufenden Timer; ui::tick() haelt Uhr und Restzeit aktuell.
 #pragma once
