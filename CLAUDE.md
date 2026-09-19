@@ -10,9 +10,17 @@ Schritte 1–5 aus `PLAN.md` sind **fertig und am Gerät verifiziert**: SD-Karte
 Rezept-Parser, Sitzungslogik mit NVS-Persistenz, WLAN/NTP/`config.json`,
 Screens 1–3 (Auswahl, Zutaten, laufender Timer). Die Demo-UI ist weg.
 
+Dazu (außerhalb des Plans, 2026-09-19): **Dashboard als Startscreen** ohne
+laufenden Teig — Uhr, Datum, Hausverbrauch vom Stromzähler per MQTT
+(`src/strom.cpp`, `esp_mqtt` aus dem IDF, kein Zusatz-Lib), Knopf „Backen" zur
+Rezeptauswahl; am Gerät mit dem echten Broker verifiziert (Wert alle ~15 s).
+Die Zugangsdaten stehen in `~/Development/strom/app.py` des Users und sind per
+CLI `m …` in der `config.json` der Karte. Außerdem **Abbruch über die UI**: das
+X im Timer-Header fragt nach (`ui::confirm()`) und führt zurück aufs Dashboard —
+damit ist der Teil von Schritt 7 erledigt.
+
 **Offen:** Schritt 6 (Vollbild-Alarm, Push, Dimmen nach 60 s), Schritt 7
-(Schrittliste als Overlay, Status-Screen, Teig-Abbruch über die UI — bisher nur
-per CLI `x`), Schritt 8 (Doku). Für den Push fehlt die Entscheidung
+(Schrittliste als Overlay, Status-Screen), Schritt 8 (Doku). Für den Push fehlt die Entscheidung
 **ntfy oder MQTT** und das Topic — beim User erfragen. Dimmen bleibt drin, auch
 wenn es ein IPS ist: das Gerät steht nachts in der Küche.
 
@@ -87,9 +95,10 @@ einem eigenen Python 3.12 aus dem uv-Tool-Env.
 | `src/sd_card.{hpp,cpp}` | SD an SPI (CLK 39, MISO 38, MOSI 40, CS 41), Listing, Beispielrezept anlegen |
 | `src/recipe.{hpp,cpp}` | JSON → `Recipe`/`Step`/`Ingredient`, `parse_duration("1h30min")`, `format_duration()` |
 | `src/session.{hpp,cpp}` | Zustandsautomat (läuft/wartet/fertig), Runden, NVS, Restzeit, ETA, Zeitraffer, Ereignisse |
-| `src/config.{hpp,cpp}` | `/config.json` von SD: WLAN, `zeitraffer`, `ntfy_topic`; legt sie aus `secrets.hpp` an |
+| `src/config.{hpp,cpp}` | `/config.json` von SD: WLAN, `zeitraffer`, `ntfy_topic`, `mqtt`; legt sie aus `secrets.hpp` an, trägt fehlenden `mqtt`-Block nach |
 | `src/net.{hpp,cpp}` | WLAN mit Auto-Reconnect, SNTP (Zeitzone Berlin), Statuszeile |
-| `src/ui/` | `ui.cpp` (Navigation, 1-Hz-Refresh), `common.cpp` (Farben, Header, Buttons), `screen_*.cpp` |
+| `src/strom.{hpp,cpp}` | Stromzähler per MQTT (`esp_mqtt`, eigener Task): letzter Wert, Alter, Status; `Power_curr`/`Total_in` aus dem ersten Objekt, das sie hat |
+| `src/ui/` | `ui.cpp` (Navigation, 1-Hz-Refresh), `common.cpp` (Farben, Header, Buttons, `confirm()`-Overlay), `screen_*.cpp` (`home` = Dashboard) |
 | `src/cli.{hpp,cpp}` | serielle Kommandos, siehe unten |
 | `src/screenshot.{hpp,cpp}` | Screen als Base64 über USB |
 | `include/secrets.hpp` | WLAN-Zugang, **gitignored**; Vorlage `secrets.example.hpp` |
@@ -97,7 +106,7 @@ einem eigenen Python 3.12 aus dem uv-Tool-Env.
 | `tools/` | `gen_fonts.sh`, `screenshot.py` |
 
 `main.cpp` verdrahtet nur noch. Reihenfolge in `setup()`: Display → SD →
-Config → Net (setzt TZ) → Session → UI.
+Config → Net (setzt TZ) → Strom → Session → UI.
 
 ### Verhalten, das nicht offensichtlich ist
 
@@ -111,6 +120,17 @@ Config → Net (setzt TZ) → Session → UI.
   sonst ein offener Schritt. Kein eigener Zustand dafür.
 - `zeitraffer` aus `config.json` teilt alle Dauern; im Timer-Screen rot markiert.
 - `config.json` fehlt → wird aus `secrets.hpp` angelegt. Danach gilt die Karte.
+- Navigation: ohne Teig Dashboard (Home) → „Backen" → Auswahl → Zutaten → Timer;
+  `ui::tick()` erzwingt Timer bei laufendem Teig und Home ohne. Nach „Brot
+  fertig" landet man auf dem Dashboard.
+- Der MQTT-Callback läuft im Task von `esp_mqtt`; der Messwert wird unter
+  einem `portMUX` kopiert. Werte älter als 90 s gelten als veraltet (wie das
+  Bar-Widget). Der Client startet erst, wenn WLAN steht (`strom::tick()`).
+- Screens setzen `refresh()` **nach** `lv_screen_load()` ab — die Aktiv-Prüfung
+  in `refresh()` greift sonst und der Screen bleibt leer.
+- `ui::confirm()` legt das Overlay auf den **aktiven Screen** (nicht
+  `lv_layer_top()`), damit es mit einem Screenwechsel durch `ui::tick()`
+  verschwindet und nicht über dem nächsten Screen hängen bleibt.
 
 ## Am Gerät arbeiten, ohne hinzuschauen
 
@@ -121,11 +141,15 @@ s <datei>   Rezept starten, z. B. s bauernbrot.json
 c           Erledigt          x  Teig verwerfen        p  Status
 l           Rezepte listen    f <n>  Zeitraffer (nur RAM, bis Reset)
 t <unix>    Uhr stellen       w <ssid> <pass>  WLAN in config.json, Neustart
-n           Netzstatus        u s|z|t  Screen anspringen (Auswahl/Zutaten/Timer)
+n           Netz-/Stromstatus u h|s|z|t|a  Screen anspringen (Dashboard/Auswahl/Zutaten/Timer/Abbruch-Rückfrage)
+m <host> <port> <user|-> <pass|-> <topic>   Stromzähler-MQTT in config.json, Neustart
+m -         Stromzähler aus
 shot        Screenshot als Base64
 ```
 
-`tools/screenshot.py out.png` holt den Screenshot (≈1,2 s). Python dafür:
+`tools/screenshot.py out.png ["u h"]` holt den Screenshot (≈1,2 s); das optionale
+Kommando geht 150 ms vorher raus — so kriegt man auch Screens, die `ui::tick()`
+eine Sekunde später wieder wegschaltet (Dashboard bei laufendem Teig). Python dafür:
 `~/.local/share/uv/tools/platformio/bin/python` (hat pyserial und Pillow).
 Rezept-Parser-Selbsttest: `PLATFORMIO_BUILD_FLAGS="-DRECIPE_SELFTEST" pio run -t upload`.
 

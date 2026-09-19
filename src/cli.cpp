@@ -8,6 +8,8 @@
 #include "recipe.hpp"
 #include "screenshot.hpp"
 #include "session.hpp"
+#include "strom.hpp"
+#include "ui/screens.hpp"
 #include "ui/ui.hpp"
 
 namespace {
@@ -23,9 +25,11 @@ void help()
     Serial.println("[cli]   f <n>       Zeitraffer-Faktor setzen");
     Serial.println("[cli]   t <unix>    Uhr stellen (bis NTP da ist)");
     Serial.println("[cli]   w <ssid> <passwort>  WLAN in /config.json schreiben und neu starten");
+    Serial.println("[cli]   m <host> <port> <user> <passwort> <topic>  Stromzaehler-MQTT in /config.json, Neustart");
+    Serial.println("[cli]   m -         Stromzaehler abschalten");
     Serial.println("[cli]   n           Netzstatus");
     Serial.println("[cli]   shot        Screenshot als Base64 (tools/screenshot.py)");
-    Serial.println("[cli]   u s|z|t     Screen anzeigen: Auswahl, Zutaten, Timer");
+    Serial.println("[cli]   u h|s|z|t|a Screen anzeigen: Dashboard, Auswahl, Zutaten, Timer, Abbruch-Rueckfrage");
 }
 
 void handle(String line)
@@ -70,10 +74,41 @@ void handle(String line)
             }
             break;
         }
-        case 'n': Serial.printf("[cli] %s\n", net::status_line().c_str()); break;
+        case 'm': {
+            config::Mqtt m;
+            if (arg != "-") {
+                // Fuenf Felder durch Leerzeichen; user/passwort duerfen "-" sein (= leer).
+                String f[5];
+                int i = 0, from = 0;
+                while (i < 5) {
+                    const int sp = arg.indexOf(' ', from);
+                    f[i++] = sp < 0 ? arg.substring(from) : arg.substring(from, sp);
+                    if (sp < 0) break;
+                    from = sp + 1;
+                }
+                if (i < 5 || !f[0].length() || !f[4].length()) {
+                    Serial.println("[cli] m <host> <port> <user|-> <passwort|-> <topic>");
+                    break;
+                }
+                m.host  = f[0];
+                m.port  = (uint16_t)f[1].toInt();
+                m.user  = f[2] == "-" ? "" : f[2];
+                m.pass  = f[3] == "-" ? "" : f[3];
+                m.topic = f[4];
+            }
+            if (config::save_mqtt(m)) {
+                Serial.println("[cli] gespeichert, Neustart");
+                delay(100);
+                ESP.restart();
+            }
+            break;
+        }
+        case 'n': Serial.printf("[cli] %s %s\n", net::status_line().c_str(), strom::status_line().c_str()); break;
         case 'u': {   // Screens ohne Touch anspringen (fuer Screenshots)
-            if (arg == "s") ui::show_select();
+            if (arg == "h") ui::show_home();
+            else if (arg == "s") ui::show_select();
             else if (arg == "t") ui::show_timer();
+            else if (arg == "a") { ui::show_timer(); ui::timer::ask_abort(); }
             else if (arg == "z") {
                 const recipe::Recipe *r = session::current_recipe();
                 recipe::Recipe tmp; String err;

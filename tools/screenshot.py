@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Holt einen Screenshot vom Geraet: schickt 'shot' ueber USB, dekodiert das
-Base64-RGB565 und schreibt ein PNG. Aufruf: tools/screenshot.py out.png
+Base64-RGB565 und schreibt ein PNG. Aufruf: tools/screenshot.py out.png [cmd]
+Ein optionales CLI-Kommando (z. B. "u h") geht kurz vor dem Schuss raus.
 Braucht pyserial und Pillow (liegen im PlatformIO-Python)."""
 import base64, sys, time
 import serial
@@ -13,6 +14,9 @@ def grab():
     # Erst alles roh einsammeln, dann parsen: zeilenweises Lesen ist zu
     # langsam, der USB-CDC des S3 verwirft Bytes, wenn der Host nicht nachkommt.
     port.reset_input_buffer()
+    if len(sys.argv) > 2:
+        port.write(sys.argv[2].encode() + b"\n")
+        time.sleep(0.15)   # unter der 1-Hz-Umschaltung von ui::tick() bleiben
     port.write(b"shot\n")
     data = bytearray()
     t0 = time.time()

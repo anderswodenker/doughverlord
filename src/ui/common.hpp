@@ -35,4 +35,8 @@ lv_obj_t *make_label(lv_obj_t *parent, const char *text, const lv_font_t *font, 
 // "21:14" oder "--:--" bei ungueltiger Uhr.
 const char *clock_text();
 
+// Rueckfrage als Overlay ueber dem aktiven Screen: Titel, Text, ein roter
+// Knopf mit ok_text (ruft on_ok) und "Zurueck" (schliesst nur).
+void confirm(const char *title, const char *text, const char *ok_text, void (*on_ok)());
+
 }  // namespace ui

@@ -15,6 +15,8 @@ lv_obj_t   *lbl_clock  = nullptr;
 lv_obj_t   *status = nullptr;
 std::vector<String> paths;
 
+void back_cb(lv_event_t *) { ui::show_home(); }
+
 void item_cb(lv_event_t *e)
 {
     const size_t i = (size_t)(uintptr_t)lv_event_get_user_data(e);
@@ -62,7 +64,8 @@ void add_item(lv_obj_t *list, size_t index, const String &path)
 void build()
 {
     scr = ui::make_screen();
-    ui::Header h = ui::make_header(scr, "Rezept wählen", false);
+    ui::Header h = ui::make_header(scr, "Rezept wählen", true);
+    lv_obj_add_event_cb(h.left_btn, back_cb, LV_EVENT_CLICKED, nullptr);
     lbl_clock = h.clock;
 
     lv_obj_t *list = lv_obj_create(scr);

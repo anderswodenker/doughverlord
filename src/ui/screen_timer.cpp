@@ -1,5 +1,6 @@
 // Screen 3: der laufende Timer. Die Restzeit traegt den Screen, Kontext in
 // schmalen Zeilen oben (Rezept, Schritt, Uhr) und unten (Danach, Endzeit).
+// Das X links oben bricht das Backen ab (mit Rueckfrage) und fuehrt zum Dashboard.
 #include "../config.hpp"
 #include "../net.hpp"
 #include "../session.hpp"
@@ -33,11 +34,24 @@ void confirm_cb(lv_event_t *)
 {
     if (session::state() == session::State::Done) {
         session::abort();       // raeumt den fertigen Teig weg
-        ui::show_select();
+        ui::show_home();
         return;
     }
     session::confirm();
     ui::timer::refresh();
+}
+
+void abort_ok()
+{
+    session::abort();
+    ui::show_home();
+}
+
+// Der Teig laeuft Stunden -- ein versehentlicher Tipp darf ihn nicht loeschen.
+void abort_cb(lv_event_t *)
+{
+    ui::confirm("Backen abbrechen?", "Der laufende Teig wird verworfen. Das lässt sich nicht rückgängig machen.",
+                "Verwerfen", abort_ok);
 }
 
 void center_cb(lv_event_t *)
@@ -50,7 +64,9 @@ void center_cb(lv_event_t *)
 void build()
 {
     scr = ui::make_screen();
-    ui::Header h = ui::make_header(scr, "", false);
+    ui::Header h = ui::make_header(scr, "", true);
+    lv_label_set_text(lv_obj_get_child(h.left_btn, 0), LV_SYMBOL_CLOSE);
+    lv_obj_add_event_cb(h.left_btn, abort_cb, LV_EVENT_CLICKED, nullptr);
     title = h.title;
     lbl_clock = h.clock;
 
@@ -193,6 +209,8 @@ void show()
     lv_screen_load(scr);
 }
 
+void ask_abort() { abort_cb(nullptr); }
+
 void refresh()
 {
     if (!scr || lv_screen_active() != scr) return;
@@ -275,6 +293,9 @@ void refresh()
 
     lv_label_set_text(next, next_text().c_str());
     lv_label_set_text(eta, eta_text().c_str());
+    // "Danach" bekommt den Platz, den die Endzeit uebrig laesst ("morgen" macht sie breiter).
+    lv_obj_update_layout(eta);
+    lv_obj_set_width(next, LV_MAX(60, 480 - 24 - lv_obj_get_width(eta) - 16));
 }
 
 }  // namespace ui::timer

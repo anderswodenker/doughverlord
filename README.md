@@ -2,7 +2,10 @@
 
 Ein Timer, der nach dem Zusammenmischen durch die Schrittkette eines
 Sauerteigrezepts führt. Rezepte als JSON auf der SD-Karte, Zustand im NVS
-(überlebt Reset und Stromausfall), Uhr per NTP. Läuft auf dem WT32-SC01 Plus
+(überlebt Reset und Stromausfall), Uhr per NTP. Ohne laufenden Teig zeigt das
+Gerät ein Dashboard mit Uhrzeit, Datum und dem Hausverbrauch vom Stromzähler
+(per MQTT); „Backen" führt zur Rezeptauswahl, das X im Timer bricht den Teig
+nach Rückfrage ab. Läuft auf dem WT32-SC01 Plus
 (ESP32-S3, 3.5"-Touch, LVGL 9 über LovyanGFX). Konzept: [`PLAN.md`](PLAN.md),
 Details für Agenten: [`CLAUDE.md`](CLAUDE.md).
 
@@ -56,11 +59,18 @@ aus, eine höher nummerierte Regel setzt ihn zu spät.
 
 ## Einrichten
 
-1. `include/secrets.example.hpp` nach `include/secrets.hpp` kopieren, WLAN eintragen.
+1. `include/secrets.example.hpp` nach `include/secrets.hpp` kopieren, WLAN eintragen
+   (MQTT-Zugang zum Stromzähler optional, geht auch später über die Karte).
 2. MicroSD als FAT32 formatieren und einstecken. Beim ersten Start legt die
-   Firmware `/config.json` (WLAN, `zeitraffer`, `ntfy_topic`) und
+   Firmware `/config.json` (WLAN, `zeitraffer`, `ntfy_topic`, `mqtt`) und
    `/rezepte/bauernbrot.json` als Vorlage an.
 3. `pio run -t upload`.
+
+Stromzähler: `mqtt` in `/config.json` (`host`, `port`, `user`, `passwort`,
+`topic`) — dasselbe Tasmota-SML-Telegramm, das auch die Omarchy-Bar liest
+(`Power_curr` in W, `Total_in` in kWh). Ohne die Karte zu ziehen, geht es über
+das serielle CLI: `m <host> <port> <user> <passwort> <topic>` (`-` für leer),
+das Gerät startet danach neu. `host` leer = Dashboard ohne Verbrauch.
 
 Rezepte: eine Datei je Brot in `/rezepte/`, Format siehe `PLAN.md` bzw.
 `sd/rezepte/bauernbrot.json`. Schrittarten: feste `dauer`, `dauer` + `runden`,

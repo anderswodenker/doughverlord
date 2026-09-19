@@ -1,7 +1,7 @@
 // Sauerteig-Timer auf dem WT32-SC01 Plus.
 //
-// main.cpp verdrahtet nur: Display, SD-Karte, Konfiguration, Netz, Sitzung,
-// UI. Die Logik steckt in den jeweiligen Modulen.
+// main.cpp verdrahtet nur: Display, SD-Karte, Konfiguration, Netz, Stromzaehler,
+// Sitzung, UI. Die Logik steckt in den jeweiligen Modulen.
 
 #include <Arduino.h>
 #include <lvgl.h>
@@ -13,6 +13,7 @@
 #include "recipe.hpp"
 #include "sd_card.hpp"
 #include "session.hpp"
+#include "strom.hpp"
 #include "ui/ui.hpp"
 
 static void log_board_info(void)
@@ -53,6 +54,7 @@ void setup()
     // Reihenfolge: Konfiguration -> Netz (setzt die Zeitzone) -> Sitzung -> UI.
     const config::Config &cfg = config::load();
     net::begin(cfg.wifi_ssid, cfg.wifi_pass);
+    strom::begin(cfg.mqtt);
     session::set_time_factor(cfg.zeitraffer);
     session::begin();
     session::log_status();
@@ -66,6 +68,7 @@ void loop()
     lv_timer_handler();
     cli::poll();
     session::tick();
+    strom::tick();
     ui::tick();
 
     // Ereignisse vorerst nur loggen; Alarm-Screen und Push kommen in Schritt 6.
@@ -80,12 +83,12 @@ void loop()
     static uint32_t last_beat = 0;
     if (millis() - last_beat > 3000) {
         last_beat = millis();
-        Serial.printf("[beat] t=%lus  heap=%lu  psram=%lu  sd=%s  %s\n",
+        Serial.printf("[beat] t=%lus  heap=%lu  psram=%lu  sd=%s  %s %s\n",
                       (unsigned long)(millis() / 1000),
                       (unsigned long)ESP.getFreeHeap(),
                       (unsigned long)ESP.getFreePsram(),
                       sdcard::ready() ? "ok" : "fehlt",
-                      net::status_line().c_str());
+                      net::status_line().c_str(), strom::status_line().c_str());
         if (session::active()) session::log_status();
     }
 
