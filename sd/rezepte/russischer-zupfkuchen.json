@@ -1,0 +1,31 @@
+{
+  "name": "Russischer Zupfkuchen",
+  "zutaten": [
+    { "menge": "300 g",  "was": "Weizenmehl (Type 405)" },
+    { "menge": "4-5 EL", "was": "Backkakao" },
+    { "menge": "150 g",  "was": "Zucker" },
+    { "menge": "1 Pck.", "was": "Backpulver" },
+    { "menge": "1",      "was": "Ei (Gr. M)" },
+    { "menge": "150 g",  "was": "Butter, kalt" },
+    { "menge": "1 Prise","was": "Salz" },
+    { "menge": "etwas",  "was": "Butter für die Form" }
+  ],
+  "schritte": [
+    { "name": "Teig kneten und in die Form geben", "offen": true,
+      "hinweis": "Ofen auf 180 °C Ober-/Unterhitze (Umluft: 160 °C) vorheizen. Springform (Ø 26 cm) einfetten. Mehl, Kakao, Zucker, Backpulver, Ei, Butter und Salz zu einem homogenen Teig verkneten. Die Hälfte in die Springform drücken, dabei einen etwa 3 cm hohen Rand formen. Restlichen Teig beiseite legen." },
+
+    { "name": "Füllung herstellen und Kuchen belegen", "offen": true,
+      "hinweis": "3 Eier mit 150 g Zucker und 200 g weicher Butter verquirlen. 500 g Magerquark, 1 Pck. Vanillezucker und 1 Pck. Vanillepuddingpulver zugeben und gut durchrühren. Masse auf den Teigboden geben. Die beiseite gelegte Teighälfte in kleine Stücke reißen und mit kleinen Lücken vorsichtig auf die Füllung legen.",
+      "zutaten": [
+        { "menge": "3",      "was": "Eier (Gr. M)" },
+        { "menge": "150 g",  "was": "Zucker" },
+        { "menge": "200 g",  "was": "Butter, weich" },
+        { "menge": "500 g",  "was": "Magerquark" },
+        { "menge": "1 Pck.", "was": "Vanillezucker" },
+        { "menge": "1 Pck.", "was": "Vanillepuddingpulver" }
+      ] },
+
+    { "name": "Backen", "dauer": "1h",
+      "hinweis": "Im vorgeheizten Ofen backen — nach 45 min mit Alufolie abdecken, falls der Kuchen zu dunkel wird. Der Kuchen sollte am Ende nicht mehr stark wackeln, aber auch nicht ganz fest sein. Danach auskühlen lassen, erst dann aus der Form nehmen. Vor dem Servieren nach Belieben mit Puderzucker bestreuen." }
+  ]
+}
