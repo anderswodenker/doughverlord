@@ -1,0 +1,55 @@
+{
+  "name": "Basis Brot",
+  "zutaten": [
+    { "menge": "500 g", "was": "Mehl (Type 550 oder Dinkel 630)" },
+    { "menge": "100 g", "was": "Anstellgut, aktiv" },
+    { "menge": "300 ml", "was": "Wasser, lauwarm" },
+    { "menge": "10 g", "was": "Salz" }
+  ],
+  "schritte": [
+    { "name": "Autolyse", "dauer": "30min" },
+
+    {
+      "name": "Salz einarbeiten",
+      "offen": true,
+      "hinweis": "Salz zugeben und wenige Minuten gründlich kneten, bis der Teig sich glatt anfühlt",
+      "zutaten": [{ "menge": "10 g", "was": "Salz" }]
+    },
+
+    { "name": "Dehnen und Falten", "dauer": "30min", "runden": 4 },
+
+    { "name": "Stockgare", "dauer": "2h30min" },
+
+    {
+      "name": "Formen",
+      "offen": true,
+      "hinweis": "Auf bemehlter Fläche rund oder länglich wirken, mit Schluss nach oben ins Gärkörbchen"
+    },
+
+    { "name": "Stückgare im Kühlschrank", "dauer": "12h" },
+
+    {
+      "name": "Ofen vorheizen",
+      "offen": true,
+      "hinweis": "Gusseisentopf (Dutch Oven) auf 250 °C vorheizen, Brot aus dem Kühlschrank stürzen, Oberfläche schräg einschneiden"
+    },
+
+    {
+      "name": "Backen mit Deckel (250 °C)",
+      "dauer": "10min",
+      "hinweis": "250 °C, Deckel zu — Schwaden bleibt im Topf"
+    },
+
+    {
+      "name": "Runterkühlen auf 210 °C (Deckel drauf)",
+      "dauer": "25min",
+      "hinweis": "Ofen auf 210 °C zurücknehmen, Deckel bleibt währenddessen auf dem Brot"
+    },
+
+    {
+      "name": "Deckel ab, Bräunung (210 °C)",
+      "dauer": "20min",
+      "hinweis": "210 °C ohne Deckel — Bräunungsgrad nach Geschmack, ggf. früher ziehen"
+    }
+  ]
+}
