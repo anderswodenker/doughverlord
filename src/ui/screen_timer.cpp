@@ -214,8 +214,7 @@ void refresh()
     }
     if (!r || !s) { lv_label_set_text(header.title, "Kein Teig"); return; }
 
-    lv_label_set_text_fmt(header.title, "%s · Schritt %u/%u", r->name.c_str(),
-                          session::step_index() + 1, (unsigned)r->schritte.size());
+    lv_label_set_text(header.title, r->name.c_str());
     lv_label_set_text(step_name, s->name.c_str());
     lv_label_set_text(btn_label, "Erledigt");
 
