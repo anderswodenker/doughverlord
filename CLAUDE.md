@@ -101,7 +101,7 @@ einem eigenen Python 3.12 aus dem uv-Tool-Env.
 | `src/session.{hpp,cpp}` | Zustandsautomat (läuft/wartet/fertig), Runden, NVS, Restzeit, ETA, Zeitraffer, Ereignisse |
 | `src/config.{hpp,cpp}` | `/config.json` von SD: WLAN, `zeitraffer`, `ntfy_topic`, `ntfy_server`, `mqtt`; legt sie aus `secrets.hpp` an, trägt fehlenden `mqtt`-Block nach |
 | `src/net.{hpp,cpp}` | WLAN mit Auto-Reconnect, SNTP (Zeitzone Berlin), Statuszeile, `notify()` per ntfy in eigenem Task |
-| `src/strom.{hpp,cpp}` | Stromzähler per MQTT (`esp_mqtt`, eigener Task): letzter Wert, Alter, Status; `Power_curr`/`Total_in` aus dem ersten Objekt, das sie hat |
+| `src/strom.{hpp,cpp}` | Stromzähler per MQTT (`esp_mqtt`, eigener Task): letzter Wert, Alter, Status; `Power_curr`/`Total_in` aus dem ersten Objekt, das sie hat. 24-h-Verlauf als Ringpuffer über Unix-Minuten (`HIST_N` = 1440 Minutenmittel), alle 5 min nach `/strom.bin` auf die SD, beim Start zurückgeladen |
 | `src/ui/` | `ui.cpp` (Navigation, 1-Hz-Refresh, Dimmen), `common.cpp` (Farben, Header mit Verbrauch/WLAN/Uhr, Buttons, `confirm()`-Overlay), `screen_*.cpp` (`home` = Dashboard, `alarm` = Vollbild-Alarm) |
 | `src/cli.{hpp,cpp}` | serielle Kommandos, siehe unten |
 | `src/screenshot.{hpp,cpp}` | Screen als Base64 über USB |
@@ -130,6 +130,12 @@ Config → Net (setzt TZ) → Strom → Session → UI.
 - Der MQTT-Callback läuft im Task von `esp_mqtt`; der Messwert wird unter
   einem `portMUX` kopiert. Werte älter als 90 s gelten als veraltet (wie das
   Bar-Widget). Der Client startet erst, wenn WLAN steht (`strom::tick()`).
+- Der Verlauf braucht eine gültige Uhr (Index = Unix-Minute % 1440); ohne
+  Uhr werden Messwerte nicht eingearbeitet. Lücken bleiben `-1` und
+  erscheinen im Chart als Lücke (`LV_CHART_POINT_NONE`), nicht als Null.
+  `strom::history()` rechnet relativ zur **aktuellen** Minute, also wandert
+  eine Funkstille als Lücke nach links durch. Das Dashboard zeichnet nur
+  neu, wenn `strom::samples()` sich geändert hat.
 - Screens setzen `refresh()` **nach** `lv_screen_load()` ab — die Aktiv-Prüfung
   in `refresh()` greift sonst und der Screen bleibt leer.
 - Der Header ist auf allen Screens gleich (`make_header`): links Knopf + Titel,

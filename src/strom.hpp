@@ -24,6 +24,13 @@ uint32_t age_s();         // Sekunden seit dem letzten Messwert (UINT32_MAX ohne
 
 constexpr uint32_t STALE_S = 90;   // wie das Bar-Widget
 
+// Verlauf der letzten 24 h als Minutenmittel, aeltester Wert zuerst,
+// -1 = keine Daten. Liegt im RAM, wird alle 5 min nach /strom.bin auf der
+// SD gesichert und beim Start zurueckgeholt; braucht eine gueltige Uhr.
+constexpr size_t HIST_N = 24 * 60;
+void     history(int16_t *out);      // fuellt HIST_N Werte
+uint32_t samples();                  // zaehlt eingearbeitete Messwerte -- fuer "hat sich was geaendert?"
+
 // Fuer Heartbeat und CLI: "strom=1234W" / "strom=alt" / "strom=--"
 String status_line();
 

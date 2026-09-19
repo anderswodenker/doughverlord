@@ -1,9 +1,13 @@
 #include "strom.hpp"
 
 #include <ArduinoJson.h>
+#include <algorithm>
+#include <FS.h>
+#include <SD.h>
 #include <mqtt_client.h>
 
 #include "net.hpp"
+#include "sd_card.hpp"
 
 namespace {
 
@@ -11,6 +15,77 @@ config::Mqtt             conf;
 esp_mqtt_client_handle_t client  = nullptr;
 bool                     started = false;
 bool                     is_connected = false;
+
+// ---- 24-h-Verlauf: Ringpuffer ueber Unix-Minuten ----
+constexpr const char *HIST_PATH  = "/strom.bin";
+constexpr uint32_t    HIST_MAGIC = 0x53545231;   // "STR1"
+
+int16_t  hist[strom::HIST_N];   // Index = Unix-Minute % HIST_N
+uint32_t hist_minute = 0;       // Unix-Minute des juengsten Buckets, 0 = leer
+uint32_t acc_sum = 0;           // laufender Bucket
+uint16_t acc_n   = 0;
+uint32_t last_at_ms = 0;        // at_ms des zuletzt eingearbeiteten Messwerts
+uint32_t sample_count = 0;
+uint32_t saved_minute = 0;
+
+bool clock_ok() { return time(nullptr) > 1704067200; }   // nach 2024-01-01
+uint32_t now_minute() { return (uint32_t)(time(nullptr) / 60); }
+
+void hist_clear()
+{
+    for (int16_t &v : hist) v = -1;
+    hist_minute = 0;
+    acc_sum = 0; acc_n = 0;
+}
+
+void hist_add(int w, uint32_t minute)
+{
+    if (hist_minute == 0 || minute < hist_minute || minute >= hist_minute + strom::HIST_N) {
+        // leer, Uhr zurueckgesprungen oder laenger als 24 h nichts: neu anfangen
+        hist_clear();
+        hist_minute = minute;
+    } else if (minute != hist_minute) {
+        // Buckets ohne Messwert bleiben -1 (Luecke im Graph statt Nulllinie)
+        for (uint32_t m = hist_minute + 1; m < minute; m++) hist[m % strom::HIST_N] = -1;
+        hist_minute = minute;
+        acc_sum = 0; acc_n = 0;
+    }
+    acc_sum += (uint32_t)(w < 0 ? 0 : w);
+    acc_n++;
+    hist[minute % strom::HIST_N] = (int16_t)std::min<uint32_t>(32767, acc_sum / acc_n);   // laufendes Mittel sofort sichtbar
+}
+
+void hist_save()
+{
+    if (!sdcard::ready()) return;
+    SD.remove(HIST_PATH);
+    File f = SD.open(HIST_PATH, FILE_WRITE);
+    if (!f) return;
+    f.write((const uint8_t *)&HIST_MAGIC, sizeof HIST_MAGIC);
+    f.write((const uint8_t *)&hist_minute, sizeof hist_minute);
+    f.write((const uint8_t *)hist, sizeof hist);
+    f.close();
+    saved_minute = hist_minute;
+}
+
+void hist_load()
+{
+    hist_clear();
+    if (!sdcard::ready()) return;
+    File f = SD.open(HIST_PATH, FILE_READ);
+    if (!f) return;
+    uint32_t magic = 0, minute = 0;
+    const bool ok = f.read((uint8_t *)&magic, sizeof magic) == sizeof magic && magic == HIST_MAGIC
+                 && f.read((uint8_t *)&minute, sizeof minute) == sizeof minute
+                 && f.read((uint8_t *)hist, sizeof hist) == sizeof hist;
+    f.close();
+    if (!ok) { hist_clear(); Serial.println("[strom] /strom.bin unbrauchbar, Verlauf leer"); return; }
+    hist_minute = minute;
+    // Der letzte Bucket ist ein Mittel aus unbekannt vielen Werten; nicht weiterrechnen.
+    acc_sum = 0; acc_n = 0;
+    Serial.printf("[strom] Verlauf geladen, Stand vor %lu min\n",
+                  clock_ok() ? (unsigned long)(now_minute() - minute) : 0UL);
+}
 
 // Der Messwert kommt aus dem MQTT-Task; kurz gesperrt lesen und schreiben.
 portMUX_TYPE lock = portMUX_INITIALIZER_UNLOCKED;
@@ -81,6 +156,7 @@ namespace strom {
 void begin(const config::Mqtt &m)
 {
     conf = m;
+    hist_load();
     if (!configured()) { Serial.println("[strom] kein MQTT-Host konfiguriert -- aus"); return; }
 
     esp_mqtt_client_config_t c = {};
@@ -103,7 +179,34 @@ void tick()
         started = esp_mqtt_client_start(client) == ESP_OK;
         Serial.printf("[strom] Client %s\n", started ? "gestartet" : "startet nicht");
     }
+
+    // Neuen Messwert in den Verlauf einarbeiten -- nur mit gueltiger Uhr,
+    // weil der Ringpuffer ueber Unix-Minuten laeuft.
+    portENTER_CRITICAL(&lock);
+    const Reading r = reading;
+    portEXIT_CRITICAL(&lock);
+    if (r.have && r.at_ms != last_at_ms && clock_ok()) {
+        last_at_ms = r.at_ms;
+        hist_add(r.watts, now_minute());
+        sample_count++;
+        // Alle 5 min sichern: ein Reflash oder Stromausfall kostet dann hoechstens 5 min Verlauf.
+        if (hist_minute != saved_minute && hist_minute % 5 == 0) hist_save();
+    }
 }
+
+void history(int16_t *out)
+{
+    // Relativ zur aktuellen Minute, nicht zum letzten Messwert: eine
+    // Funkstille wandert so als Luecke nach links durch.
+    const uint32_t now = clock_ok() ? now_minute() : hist_minute;
+    for (size_t i = 0; i < HIST_N; i++) {
+        const uint32_t m = now - (HIST_N - 1) + i;
+        const bool have = hist_minute && m <= hist_minute && m + HIST_N > hist_minute;
+        out[i] = have ? hist[m % HIST_N] : -1;
+    }
+}
+
+uint32_t samples() { return sample_count; }
 
 bool configured() { return conf.host.length() > 0 && conf.topic.length() > 0; }
 bool connected()  { return is_connected; }
