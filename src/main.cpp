@@ -1,4 +1,4 @@
-// Doughverlord: Sauerteig-Timer auf dem WT32-SC01 Plus.
+// Doughverlord: Back-Timer auf dem WT32-SC01 Plus.
 //
 // main.cpp verdrahtet nur: Display, SD-Karte, Konfiguration, Netz, Stromzaehler,
 // Sitzung, UI. Die Logik steckt in den jeweiligen Modulen.

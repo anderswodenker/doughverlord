@@ -1,4 +1,4 @@
-# Doughverlord — Sauerteig-Timer auf dem WT32-SC01 Plus
+# Doughverlord — Back-Timer auf dem WT32-SC01 Plus
 
 ## Kontext
 
@@ -6,7 +6,7 @@ Auf dem WT32-SC01 Plus läuft ein verifiziertes Grundgerüst (Display, Touch, LV
 über LovyanGFX). Die aktuelle UI ist reines Diagnosewerkzeug und wird durch die
 eigentliche Anwendung ersetzt.
 
-Gebraucht wird ein Timer für Sauerteigbrot: Nach dem Zusammenmischen der Zutaten
+Gebraucht wird ein Timer fürs Backen, zuerst für Sauerteigbrot: Nach dem Zusammenmischen der Zutaten
 führt er durch eine Kette von Schritten, die je nach Brotsorte unterschiedlich
 aussieht. Ein einzelner Küchenwecker reicht dafür nicht — die Abfolge ist das
 Eigentliche.

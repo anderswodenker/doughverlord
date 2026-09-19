@@ -1,8 +1,8 @@
 # Doughverlord — Kontext für Agenten
 
 Embedded-Projekt auf einem WT32-SC01 Plus (ESP32-S3 mit 3.5"-Touchdisplay):
-ein **Sauerteig-Timer** („Doughverlord"), der nach dem Zusammenmischen durch die Schrittkette
-eines Rezepts führt. Plan und Begründungen in [`PLAN.md`](PLAN.md).
+ein **Back-Timer** („Doughverlord"), der nach dem Zusammenmischen durch die Schrittkette
+eines Rezepts führt — Sauerteigbrot zuerst, Kuchen sollen folgen. Plan und Begründungen in [`PLAN.md`](PLAN.md).
 
 ## Stand (2026-09-19)
 
